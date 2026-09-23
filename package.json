@@ -1,0 +1,67 @@
+{
+  "name": "@vexpay/node",
+  "version": "0.1.0",
+  "description": "Official Node.js/TypeScript SDK for the VEXPay API \u2014 Venezuelan payments (Pago M\u00f3vil C2P, cards, d\u00e9bito inmediato), payouts, checkout sessions, and signed webhooks.",
+  "license": "MIT",
+  "keywords": [
+    "vexpay",
+    "venezuela",
+    "payments",
+    "pago movil",
+    "c2p",
+    "bolivares",
+    "sdk"
+  ],
+  "homepage": "https://github.com/chuventures/vexpay-node#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chuventures/vexpay-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chuventures/vexpay-node/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": false
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "node scripts/check-private-imports.mjs",
+    "test": "vitest run --typecheck && node scripts/check-readme.mjs",
+    "generate": "openapi-typescript ../sdk-spec/openapi.json -o src/generated/openapi.ts --default-non-nullable=false && node scripts/generate-routes.mjs ../sdk-spec/openapi.json src/generated/routes.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "openapi-typescript": "^7",
+    "tsup": "^8",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}
