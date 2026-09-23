@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   VexPay,
@@ -42,6 +43,11 @@ async function setup(script: ScriptedResponse[], opts: { maxNetworkRetries?: num
 }
 
 describe('client configuration', () => {
+  it('reports the package version (User-Agent) that package.json publishes', () => {
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+    expect(VERSION).toBe(pkg.version);
+  });
+
   it('refuses to construct without an API key, before any network call', () => {
     expect(() => new VexPay('')).toThrow(VexPayConfigurationError);
     expect(() => new VexPay('   ')).toThrow(/API key is required/);
@@ -52,6 +58,33 @@ describe('client configuration', () => {
     const vexpay = new VexPay('sk_test_123', { baseUrl: server.url });
     await vexpay.http.request('GET', '/v1/banks');
     expect(server.requests[0]?.url).toBe('/v1/banks');
+  });
+});
+
+describe('payments.pagoMovil.receivingAccount', () => {
+  it('GETs the receiving account with no body and returns it typed', async () => {
+    const account = {
+      provider: 'r4',
+      bankCode: '0169',
+      bankName: 'R4 Conecta',
+      phone: '04125555555',
+      identification: '13536734',
+      configured: true,
+      missing: [],
+      livemode: false,
+    };
+    server = await mockServer([{ status: 200, body: account }]);
+    const vexpay = new VexPay('sk_test_123', { baseUrl: server.url });
+
+    const res = await vexpay.payments.pagoMovil.receivingAccount();
+
+    expect(res).toEqual(account);
+    expect(res.configured).toBe(true);
+    const req = server.requests[0]!;
+    expect(req.method).toBe('GET');
+    expect(req.url).toBe('/v1/payments/pago-movil/receiving-account');
+    expect(req.body).toBeUndefined();
+    expect(req.headers['idempotency-key']).toBeUndefined();
   });
 });
 

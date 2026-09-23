@@ -1,6 +1,6 @@
 {
   "name": "@vexpay/node",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official Node.js/TypeScript SDK for the VEXPay API \u2014 Venezuelan payments (Pago M\u00f3vil C2P, cards, d\u00e9bito inmediato), payouts, checkout sessions, and signed webhooks.",
   "license": "MIT",
   "keywords": [

@@ -30,6 +30,7 @@ export const ROUTES = {
   Payments_executeC2p: { method: 'POST', path: '/v1/payments/c2p' },
   Payments_executeVpos: { method: 'POST', path: '/v1/payments/vpos' },
   Payments_getBanks: { method: 'GET', path: '/v1/banks' },
+  Payments_getPagoMovilReceivingAccount: { method: 'GET', path: '/v1/payments/pago-movil/receiving-account' },
   Payments_getPayment: { method: 'GET', path: '/v1/payments/{id}' },
   Payments_getPaymentByRef: { method: 'GET', path: '/v1/payments/by-ref/{externalRef}' },
   Payments_getQuote: { method: 'GET', path: '/v1/quote' },

@@ -24,6 +24,14 @@ export class Vpos extends APIResource {
 
 /** Confirm a Pago Móvil the customer already sent to you. */
 export class PagoMovil extends APIResource {
+  /**
+   * The account your customers must send the Pago Móvil to (bank, phone, identification).
+   * Don't offer Pago Móvil while `configured` is false.
+   */
+  receivingAccount(options?: RequestOptions) {
+    return this.call('Payments_getPagoMovilReceivingAccount', {}, options);
+  }
+
   verify(params: RequestBody<'Payments_verifyPagoMovil'>, options?: RequestOptions) {
     return this.call('Payments_verifyPagoMovil', { body: params }, options);
   }

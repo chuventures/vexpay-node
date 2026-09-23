@@ -521,6 +521,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/payments/pago-movil/receiving-account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the Pago Móvil account your customers pay into
+         * @description Where a customer must send a Pago Móvil for POST /v1/payments/pago-movil/verify to find it: bank, phone and identification of the receiving account. Resolved with the same provider routing as verify (your enabled/default providers; no override). When a detail is not configured the response is still 200 with `configured: false` and `missing` listing it — do not offer Pago Móvil to customers until `configured` is true.
+         */
+        get: operations["Payments_getPagoMovilReceivingAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/payments/pago-movil/verify": {
         parameters: {
             query?: never;
@@ -2211,6 +2231,40 @@ export interface components {
             applicationFeeVes?: string;
             /** @example 10 */
             applicationFeePercent?: number;
+        };
+        PagoMovilReceivingAccountDto: {
+            /**
+             * @description Provider Pago Móvil verify uses for this tenant (same routing as POST /v1/payments/pago-movil/verify).
+             * @example r4
+             * @enum {string}
+             */
+            provider: "r4" | "bnc" | "sofitasa";
+            /**
+             * @description Four-digit SIMF code of the receiving bank.
+             * @example 0169
+             */
+            bankCode: string;
+            /** @example Mi Banco */
+            bankName: string;
+            /**
+             * @description Phone the customer sends the Pago Móvil to (11 digits). Null when not configured.
+             * @example 04125555555
+             */
+            phone: string | null;
+            /**
+             * @description Cédula/RIF of the receiving account, as configured. Null when not configured.
+             * @example 13536734
+             */
+            identification: string | null;
+            /** @description True when every receiving detail is set. Do not offer Pago Móvil to customers while false. */
+            configured: boolean;
+            /**
+             * @description Receiving details that are not configured yet.
+             * @example []
+             */
+            missing: ("phone" | "identification")[];
+            /** @description False for test-mode API keys. */
+            livemode: boolean;
         };
         PagoMovilVerifyDto: {
             /** @example 25 */
@@ -4749,6 +4803,61 @@ export interface operations {
             };
             /** @description Carding defense tripped: 3 distinct cards already failed for this payer in the last 30 minutes. */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Payments_getPagoMovilReceivingAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagoMovilReceivingAccountDto"];
+                };
+            };
+            /** @description Invalid request or unsupported operation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
