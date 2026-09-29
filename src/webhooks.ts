@@ -25,6 +25,7 @@ export const WEBHOOK_EVENT_NAMES = [
   'tenant.api_key.created',
   'tenant.api_key.rotated',
   'tenant.api_key.revoked',
+  'tenant.live_status_changed',
   'notification.test',
 ] as const;
 

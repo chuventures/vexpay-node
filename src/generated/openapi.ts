@@ -104,7 +104,7 @@ export interface paths {
         put?: never;
         /**
          * Instant crédito to the verified tenant payout account
-         * @description Credits the tenant’s verified Pago Móvil account (see GET /v1/tenant/payout-account). Requires a verified account that is eligible (first verify is immediate; destination changes require a completed 1 business-day cooling period). `monto` is the gross VES withdrawn from available balance; the bank receives monto minus feePercent. Uses ProviderRegistry (R4 preferred).
+         * @description Credits the tenant’s verified Pago Móvil account (see GET /v1/tenant/payout-account). Requires a verified account that is eligible (first verify is immediate; destination changes require a completed 1 business-day cooling period). `monto` is the gross VES withdrawn from available balance; the bank receives monto minus feePercent.
          */
         post: operations["Payouts_createInstant"];
         delete?: never;
@@ -252,7 +252,7 @@ export interface paths {
         put?: never;
         /**
          * Send a debit authorization code to the customer
-         * @description Asks the payer bank to SMS an OTP for débito inmediato. Amounts are in VES. On success the response `code` is typically `202`. Collect the OTP from your customer, then call POST /v1/payments/debit with the same payer fields. Test-mode tenants use a simulated débito (R4 has no bank sandbox) — use the rotating code from Portal → Sandbox.
+         * @description Asks the payer bank to SMS an OTP for débito inmediato. Amounts are in VES. On success the response `code` is typically `202`. Collect the OTP from your customer, then call POST /v1/payments/debit with the same payer fields. Test-mode tenants use a simulated débito — use the rotating code from Portal → Sandbox.
          */
         post: operations["R4Operations_generarOtp"];
         delete?: never;
@@ -272,7 +272,7 @@ export interface paths {
         put?: never;
         /**
          * Execute an immediate debit
-         * @description Charges the payer after they provide the bank OTP. `ACCP` = accepted (payment.completed webhook). `AC00` = pending — the gateway polls ConsultarOperaciones until ACCP or a reject code, then fires payment.completed or payment.failed. Optional `externalRef` is stored for recovery via GET /v1/payments/by-ref/:externalRef (correlation only — not idempotent). Response always includes `paymentId` for the DEBITO_INMEDIATO payment record. Test-mode tenants simulate débito (R4 has no sandbox). VPOS always uses BNC; for BNC sandbox credentials see Portal → Sandbox.
+         * @description Charges the payer after they provide the bank OTP. `ACCP` = accepted (payment.completed webhook). `AC00` = pending — the gateway polls ConsultarOperaciones until ACCP or a reject code, then fires payment.completed or payment.failed. Optional `externalRef` is stored for recovery via GET /v1/payments/by-ref/:externalRef (correlation only — not idempotent). Response always includes `paymentId` for the DEBITO_INMEDIATO payment record. Test-mode tenants simulate débito; sandbox codes and test cards are in Portal → Sandbox.
          */
         post: operations["R4Operations_debitoInmediato"];
         delete?: never;
@@ -421,6 +421,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/crypto/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get USDT balance
+         * @description USDT available for payouts and USDT reserved by in-flight payouts, from the VEXPay USDT ledger.
+         */
+        get: operations["Crypto_getBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/crypto/deposit-addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get or create a USDT deposit address
+         * @description Returns the static USDT address for one of your customers on one network. Calling again returns the same address. Deposits are credited to your USDT balance (net of the USDT fee) and reported with `payment.completed` carrying `customerRef`.
+         */
+        post: operations["Crypto_createDepositAddress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/crypto/networks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List USDT networks
+         * @description Enabled networks with the payout fee and whether a payout of `amountUsdt` can be sent now.
+         */
+        get: operations["Crypto_listNetworks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/crypto/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send USDT to an external address
+         * @description Debits amount + fee from your USDT balance. Payouts within your limits are sent automatically; larger ones wait for review. Completion arrives as `payout.completed` (with `txHash`) or `payout.failed` (refunded). A payout to one of your own deposit addresses settles instantly inside VEXPay with no network fee.
+         */
+        post: operations["Crypto_createPayout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/crypto/payouts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Retrieve a USDT payout */
+        get: operations["Crypto_getPayout"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/banks": {
         parameters: {
             query?: never;
@@ -450,7 +547,7 @@ export interface paths {
         };
         /**
          * Quote a USD amount in VES at the current BCV rate
-         * @description Returns the authoritative VEX FX BCV rate (bcvRate/vesAmount) used for payment settlement, plus medianRate/medianVesAmount from available BCV sources (VEX FX and bank when configured — R4 MBbcv preferred, BNC BCVRates fallback).
+         * @description Returns the authoritative VEX FX BCV rate (bcvRate/vesAmount) used for payment settlement, plus medianRate/medianVesAmount from available BCV sources (VEX FX and partner-bank rates when available).
          */
         get: operations["Payments_getQuote"];
         put?: never;
@@ -472,7 +569,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pending C2P payment intent and request bank OTP when supported
-         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. For R4, also calls GenerarOtp so the payer bank SMS’s a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p.
+         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. When the routed bank supports it, VEXPay also asks the payer bank to SMS a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p.
          */
         post: operations["Payments_requestC2p"];
         delete?: never;
@@ -552,7 +649,7 @@ export interface paths {
         put?: never;
         /**
          * Verify a customer-originated Pago Móvil transfer
-         * @description Matches a customer-supplied bank `reference` (and optional `dateMovement` YYYY-MM-DD) against bank movements for the quoted USD amount. Returns PaymentReceiptDto when found. Routed by the tenant's active provider — BNC queries the bank live; R4 confirms against the R4notifica inbound webhook already received for that reference.
+         * @description Matches a customer-supplied bank `reference` (and optional `dateMovement` YYYY-MM-DD) against bank movements for the quoted USD amount. Returns PaymentReceiptDto when found. Depending on the receiving bank, confirmation is a live query or the bank's own notification to VEXPay — right after a transfer, a not-found can resolve within seconds, so retry with backoff.
          */
         post: operations["Payments_verifyPagoMovil"];
         delete?: never;
@@ -1042,7 +1139,7 @@ export interface components {
              */
             message?: string | string[];
             /**
-             * @description Machine-readable error code (e.g. `external_ref_conflict`, `insufficient_balance`, `idempotency_key_reused`) or, for Nest default errors, a short label such as `Bad Request`. Domain errors may include extra route-specific fields.
+             * @description Machine-readable error code (e.g. `external_ref_conflict`, `insufficient_balance`, `idempotency_key_reused`, `live_mode_not_activated`) or, for Nest default errors, a short label such as `Bad Request`. Domain errors may include extra route-specific fields.
              * @example insufficient_balance
              */
             error?: string;
@@ -1100,7 +1197,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1109,7 +1206,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1130,7 +1227,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -1889,6 +1986,121 @@ export interface components {
              */
             ip?: string;
         };
+        CryptoBalanceDto: {
+            /** @example USDT */
+            currency: string;
+            /**
+             * @description USDT available for payouts (ledger).
+             * @example 97.00
+             */
+            availableUsdt: string;
+            /**
+             * @description USDT reserved by payouts that have not completed yet.
+             * @example 50.10
+             */
+            pendingPayoutUsdt: string;
+            /** Format: date-time */
+            asOf: string;
+        };
+        CreateDepositAddressDto: {
+            /**
+             * @description Your identifier for the customer this address belongs to (1–128 chars: A–Z a–z 0–9 _ . : @ -).
+             * @example user_123
+             */
+            customerRef: string;
+            /**
+             * @example BEP20
+             * @enum {string}
+             */
+            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1";
+        };
+        DepositAddressDto: {
+            /** @example user_123 */
+            customerRef: string;
+            /** @example BEP20 */
+            network: string;
+            /** @example USDT */
+            currency: string;
+            /** @example 0x9f3c… */
+            address: string;
+            /** @description Destination tag / memo the payer must include (TON). */
+            tag?: string;
+            /** @description True when the network requires the tag. */
+            tagRequired: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CryptoNetworkDto: {
+            /** @example POLYGON */
+            network: string;
+            /** @example Polygon */
+            displayName: string;
+            receiveEnabled: boolean;
+            payoutEnabled: boolean;
+            /** @example 0.10 */
+            payoutFeeUsdt: string;
+            /** @example 1.00 */
+            minPayoutUsdt: string;
+            tagRequired: boolean;
+            /** @description Whether a payout of the requested amount can be sent on this network now. */
+            available: boolean;
+        };
+        CreateCryptoPayoutDto: {
+            /**
+             * @example POLYGON
+             * @enum {string}
+             */
+            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1";
+            /** @example 0x9f3c4e1b2a7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e */
+            address: string;
+            /** @description Destination tag / memo (required on TON). */
+            tag?: string;
+            /**
+             * @description Amount the destination receives, in USDT (max 2 decimals).
+             * @example 50.00
+             */
+            amountUsdt: string;
+            /**
+             * @description Your customer reference, echoed on webhooks.
+             * @example user_123
+             */
+            customerRef?: string;
+            /**
+             * @description Unique per payout. Replays return the same payout (200).
+             * @example withdrawal_8812
+             */
+            idempotencyKey: string;
+        };
+        CryptoPayoutDto: {
+            id: string;
+            /** @example crypto.payout */
+            object: string;
+            /** @example USDT */
+            currency: string;
+            /** @enum {string} */
+            status: "pending" | "processing" | "completed" | "failed";
+            network: string;
+            address: string;
+            tag?: string;
+            /** @example 50.00 */
+            amountUsdt: string;
+            /**
+             * @description Network fee + margin (0 for internal).
+             * @example 0.10
+             */
+            feeUsdt: string;
+            customerRef?: string;
+            merchantId?: string;
+            idempotencyKey: string;
+            txHash?: string;
+            /** @description Settled inside VEXPay (destination is one of your own deposit addresses). */
+            internal: boolean;
+            failureReason?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt?: string;
+        };
         BankResponseDto: {
             /**
              * @description Canonical four-digit SIMF bank code.
@@ -1930,7 +2142,7 @@ export interface components {
             /** Format: date-time */
             fetchedAt: string;
             /**
-             * @description Per-source BCV rates or error objects (e.g. `{ error: "BANK_NOT_CONFIGURED" }`). Keys typically include `vexFx` and `bank`. `sources.bank` prefers R4 MBbcv, then falls back to BNC Services/BCVRates (`provider: "r4" | "bnc"`).
+             * @description Per-source BCV rates or error objects (e.g. `{ error: "BANK_NOT_CONFIGURED" }`). Keys typically include `vexFx` and `bank`. `sources.bank` is the partner-bank BCV rate when available.
              * @example {
              *       "vexFx": {
              *         "rate": 36.5,
@@ -2054,7 +2266,7 @@ export interface components {
              * @description Use this value as intentId when executing the C2P charge.
              */
             intentId: string;
-            /** @description true when the provider instructed the payer bank to SMS an OTP to the customer (R4 GenerarOtp). false when the customer must generate the token in their bank app. */
+            /** @description true when the provider instructed the payer bank to SMS an OTP to the customer. false when the customer must generate the token in their bank app. */
             otpRequested: boolean;
         };
         C2pPaymentDto: {
@@ -2282,18 +2494,18 @@ export interface components {
              */
             externalRef?: string;
             /**
-             * @description Payer bank SIMF code. Required when the resolved provider is Sofitasa; ignored by R4/BNC.
+             * @description Payer bank SIMF code. Required for some receiving banks — send it whenever you have it.
              * @example 0102
              */
             debtorBankCode?: string;
             /**
-             * @description Instrument type for providers that need it (Sofitasa). Defaults to transferencia.
+             * @description Instrument type, required by some receiving banks. Defaults to transferencia.
              * @example transferencia
              * @enum {string}
              */
             txType?: "pago_movil" | "transferencia" | "debito_inmediato";
             /**
-             * @description Payer Pago Móvil phone. Required for Sofitasa when txType is pago_movil (11-digit local, e.g. 04149333844). Ignored by R4/BNC and for other Sofitasa tx types (those send 0).
+             * @description Payer Pago Móvil phone (11-digit local, e.g. 04149333844). Required by some receiving banks when txType is pago_movil — send it whenever you have it.
              * @example 04149333844
              */
             debtorCellPhone?: string;
@@ -2548,7 +2760,7 @@ export interface components {
              */
             allowedOrigins?: string[];
             /** @description Payment methods offered. Defaults to every method your account can accept. */
-            methods?: ("c2p" | "vpos")[];
+            methods?: ("c2p" | "vpos" | "usdt")[];
             /**
              * @description Up to 20 string key/value pairs (keys ≤ 40 chars, values ≤ 500 chars).
              * @example {
@@ -2584,7 +2796,7 @@ export interface components {
                 [key: string]: string;
             };
             allowedOrigins: string[];
-            methods: ("c2p" | "vpos")[];
+            methods: ("c2p" | "vpos" | "usdt")[];
             successUrl?: string | null;
             cancelUrl?: string | null;
             /** @description Latest payment for this session, once one exists. */
@@ -2726,6 +2938,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -2765,6 +2986,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2825,6 +3055,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -2866,6 +3105,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2934,6 +3182,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3011,6 +3268,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -3076,6 +3342,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3164,6 +3439,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description external_ref_conflict when the same key is reused with a different payload. */
             409: {
                 headers: {
@@ -3245,6 +3529,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Batch external_ref_conflict when the same batch key is reused with a different payload. */
             409: {
                 headers: {
@@ -3304,6 +3597,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3377,6 +3679,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3441,6 +3752,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -3493,6 +3813,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3562,6 +3891,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -3613,6 +3951,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3693,6 +4040,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3790,6 +4146,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -3799,7 +4164,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3871,6 +4236,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -3880,7 +4254,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -3948,6 +4322,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -3957,7 +4340,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4028,6 +4411,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Entity not found for this tenant, or missing operation id. */
             404: {
                 headers: {
@@ -4046,7 +4438,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4117,6 +4509,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -4126,7 +4527,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4197,6 +4598,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -4206,7 +4616,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4277,6 +4687,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description No completed PAGO_MOVIL payment found for the given referencia. */
             404: {
                 headers: {
@@ -4304,7 +4723,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4375,6 +4794,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -4384,7 +4812,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -4455,6 +4883,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The banking network rejected the operation. */
             422: {
                 headers: {
@@ -4464,8 +4901,347 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Advanced payments require the R4 provider to be configured for this environment. */
+            /** @description Advanced payments are not available in this environment. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_getBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoBalanceDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_createDepositAddress: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDepositAddressDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositAddressDto"];
+                };
+            };
+            /** @description `unsupported_network` or invalid `customerRef`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `method_not_allowed` — USDT is not enabled for this account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_listNetworks: {
+        parameters: {
+            query?: {
+                amountUsdt?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoNetworkDto"][];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `method_not_allowed` — USDT is not enabled for this account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_createPayout: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCryptoPayoutDto"];
+            };
+        };
+        responses: {
+            /** @description Idempotent replay of an existing payout. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoPayoutDto"];
+                };
+            };
+            /** @description Payout created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoPayoutDto"];
+                };
+            };
+            /** @description `unsupported_network`, `invalid_address` or `invalid_data`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `idempotency_key_reused` with a different request. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `insufficient_balance` or `amount_below_minimum`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_getPayout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoPayoutDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4528,6 +5304,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -4580,6 +5365,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4649,6 +5443,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -4705,6 +5508,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4792,6 +5604,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The provider rejected the charge. */
             422: {
                 headers: {
@@ -4865,6 +5686,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -4927,6 +5757,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -4977,6 +5816,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5042,6 +5890,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5117,6 +5974,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5185,6 +6051,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5273,6 +6148,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description external_ref_conflict when the same key is reused with a different payload. */
             409: {
                 headers: {
@@ -5333,6 +6217,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5412,6 +6305,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5474,6 +6376,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5546,6 +6457,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5609,6 +6529,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5698,6 +6627,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5765,6 +6703,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5844,6 +6791,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5909,6 +6865,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5967,6 +6932,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6053,6 +7027,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6111,6 +7094,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6179,6 +7171,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6258,6 +7259,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6328,6 +7338,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description amount_below_minimum */
             422: {
                 headers: {
@@ -6378,6 +7397,15 @@ export interface operations {
             };
             /** @description Missing or invalid tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6452,6 +7480,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -6507,6 +7544,15 @@ export interface operations {
             };
             /** @description Missing or invalid tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6571,6 +7617,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6621,6 +7676,15 @@ export interface operations {
             };
             /** @description Missing or invalid tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6706,6 +7770,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6764,6 +7837,15 @@ export interface operations {
             };
             /** @description Missing or invalid tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6843,6 +7925,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6908,6 +7999,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -6949,6 +8049,15 @@ export interface operations {
         responses: {
             /** @description Missing or invalid tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7025,6 +8134,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -7076,6 +8194,15 @@ export interface operations {
             };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

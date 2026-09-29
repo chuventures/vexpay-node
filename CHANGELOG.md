@@ -1,5 +1,12 @@
 # @vexpay/node
 
+## 0.2.0
+
+### Minor Changes
+
+- Add `crypto` for USDT: `crypto.balance.retrieve()`, `crypto.depositAddresses.create()`, `crypto.networks.list()`, `crypto.payouts.create()` / `retrieve()`. USDT settles in USDT in its own balance; the calls answer 403 `method_not_allowed` when USDT isn't enabled on the account.
+- Checkout sessions accept `methods: ['usdt']`; USDT `payment.completed` events add `amountUsdt`, `feeUsdt`, `network`, `txHashes`, `customerRef`, `underpaid` and `checkoutSession`.
+
 ## 0.1.1
 
 ### Patch Changes

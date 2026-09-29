@@ -4,7 +4,7 @@ import type { RequestBody } from '../types';
 
 /** Pago Móvil C2P: request the bank OTP, then charge with the customer's token. */
 export class C2p extends APIResource {
-  /** Create a C2P intent; the payer's bank sends them a token (R4 also triggers the SMS). */
+  /** Create a C2P intent; the payer's bank sends them a token (see `otpRequested`). */
   request(params: RequestBody<'Payments_requestC2p'>, options?: RequestOptions) {
     return this.call('Payments_requestC2p', { body: params }, options);
   }
@@ -37,7 +37,7 @@ export class PagoMovil extends APIResource {
   }
 }
 
-/** Débito inmediato (requires R4). */
+/** Débito inmediato (advanced payments, enabled per account). */
 export class Debit extends APIResource {
   requestOtp(params: RequestBody<'R4Operations_generarOtp'>, options?: RequestOptions) {
     return this.call('R4Operations_generarOtp', { body: params }, options);
@@ -48,7 +48,7 @@ export class Debit extends APIResource {
   }
 }
 
-/** Crédito inmediato and disbursements (requires R4). */
+/** Crédito inmediato and disbursements (advanced payments, enabled per account). */
 export class Credit extends APIResource {
   /** Instant credit to a Pago Móvil phone. */
   create(params: RequestBody<'R4Operations_creditoInmediato'>, options?: RequestOptions) {
@@ -66,7 +66,7 @@ export class Credit extends APIResource {
   }
 }
 
-/** Bank operation status for débito/crédito (requires R4). */
+/** Bank operation status for débito/crédito (advanced payments, enabled per account). */
 export class Operations extends APIResource {
   retrieve(id: string, options?: RequestOptions) {
     return this.call('R4Operations_consultarOperacion', { path: { id } }, options);
@@ -78,14 +78,14 @@ export class Operations extends APIResource {
   }
 }
 
-/** Account payout dispersion (requires R4). */
+/** Account payout dispersion (advanced payments, enabled per account). */
 export class Dispersals extends APIResource {
   create(params: RequestBody<'R4Operations_dispersarPagos'>, options?: RequestOptions) {
     return this.call('R4Operations_dispersarPagos', { body: params }, options);
   }
 }
 
-/** Vuelto / change payments (requires R4). */
+/** Vuelto / change payments (advanced payments, enabled per account). */
 export class Change extends APIResource {
   create(params: RequestBody<'R4Operations_ejecutarVuelto'>, options?: RequestOptions) {
     return this.call('R4Operations_ejecutarVuelto', { body: params }, options);

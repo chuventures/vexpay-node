@@ -9,6 +9,7 @@ import {
   WebhookEndpoints,
 } from './resources/account';
 import { Checkout, PaymentLinks, Products } from './resources/commerce';
+import { Crypto } from './resources/crypto';
 import { Merchants } from './resources/merchants';
 import { Payments } from './resources/payments';
 import { Webhooks } from './webhooks';
@@ -37,6 +38,8 @@ export class VexPay {
   readonly checkout: Checkout;
   readonly merchants: Merchants;
   readonly payouts: Payouts;
+  /** USDT: deposit addresses, balance, networks and payouts. */
+  readonly crypto: Crypto;
   readonly products: Products;
   readonly paymentLinks: PaymentLinks;
   readonly tenantPayoutAccount: TenantPayoutAccount;
@@ -70,6 +73,7 @@ export class VexPay {
     this.checkout = new Checkout(this.http);
     this.merchants = new Merchants(this.http);
     this.payouts = new Payouts(this.http);
+    this.crypto = new Crypto(this.http);
     this.products = new Products(this.http);
     this.paymentLinks = new PaymentLinks(this.http);
     this.tenantPayoutAccount = new TenantPayoutAccount(this.http);

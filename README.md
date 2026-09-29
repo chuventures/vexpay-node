@@ -87,6 +87,40 @@ if (current.status === 'paid') {
 }
 ```
 
+## USDT
+
+USDT settles in USDT, into your VEXPay USDT balance (never converted to VES). It must be enabled on your account — otherwise these calls fail with `method_not_allowed` (403). Pay-ins cost 2.5 % + 0.50 USDT; payouts cost the network fee listed by `crypto.networks.list()`.
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+// Hosted USDT checkout: the buyer picks a network and gets a deposit address.
+const session = await vexpay.checkout.sessions.create({
+  amountUsd: 25,
+  reference: 'order-1042',
+  methods: ['usdt'],
+  successUrl: 'https://shop.example/gracias',
+});
+
+// Or a static deposit address per customer — every deposit fires payment.completed with this customerRef.
+const address = await vexpay.crypto.depositAddresses.create({ customerRef: 'user_123', network: 'BEP20' });
+
+const balance = await vexpay.crypto.balance.retrieve();
+const networks = await vexpay.crypto.networks.list({ amountUsdt: '50.00' });
+
+// Pay out from your USDT balance. Same idempotencyKey + same body replays the same payout.
+const payout = await vexpay.crypto.payouts.create({
+  network: 'POLYGON',
+  address: '0x…',
+  amountUsdt: '50.00',
+  idempotencyKey: 'withdrawal-981',
+});
+```
+
+USDT `payment.completed` events add `amountUsdt`, `feeUsdt`, `network`, `txHashes` and, for checkout sessions, `checkoutSession.reference`. **Don't fulfil when `underpaid` is `true`** — less than the order total arrived. Payouts end in `payout.completed` (with `txHash`) or `payout.failed` (amount and fee refunded).
+
 ## Webhooks
 
 VEXPay signs every delivery with a `VexPay-Signature` header. Verify it with the **raw** request body — parsing and re-serializing JSON changes the bytes and breaks the signature.
@@ -243,8 +277,12 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `payments.c2p` | `request`, `execute` |
 | `payments.vpos` | `create` |
 | `payments.pagoMovil` | `verify` |
-| `payments.debit` · `credit` · `operations` · `dispersals` · `change` | débito/crédito inmediato and disbursements (R4) |
+| `payments.debit` · `credit` · `operations` · `dispersals` · `change` | débito/crédito inmediato and disbursements (advanced payments) |
 | `checkout.sessions` | `create`, `retrieve` |
+| `crypto.balance` | `retrieve` |
+| `crypto.depositAddresses` | `create` |
+| `crypto.networks` | `list` |
+| `crypto.payouts` | `create`, `retrieve` |
 | `merchants` | `create`, `list`, `retrieve`, `retrieveByRef`, `update`, `delete`, `retrieveBalance`, `transfer`, `listAuditEvents`, `startVerification`, `confirmVerification` |
 | `merchants.payoutMethods` | `list`, `create`, `setDefault`, `delete`, `startVerification`, `confirmVerification` |
 | `payouts` | `create`, `createInstant`, `createBatch`, `list`, `retrieve`, `retrieveByRef` |
