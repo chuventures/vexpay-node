@@ -908,8 +908,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update merchant flags (active / auto-payout)
-         * @description Soft off-switch for payouts and optional autoPayoutEnabled for cron payouts from available balance.
+         * Update merchant flags (active / auto-payout / commission)
+         * @description Soft off-switch for payouts, optional autoPayoutEnabled for cron payouts from available balance, and the merchant's negotiated applicationFeePercent (null = tenant default commission).
          */
         patch: operations["Merchants_update"];
         trace?: never;
@@ -1806,7 +1806,10 @@ export interface components {
              * @example 50.00
              */
             applicationFeeVes?: string;
-            /** @example 10 */
+            /**
+             * @description Optional percent of vesAmount used when applicationFeeVes is omitted. When both are omitted and merchantId is set, the merchant's commission (or the tenant default commission) applies.
+             * @example 10
+             */
             applicationFeePercent?: number;
         };
         ManualOperationPollDto: {
@@ -2185,7 +2188,10 @@ export interface components {
              * @example 50.00
              */
             applicationFeeVes?: string;
-            /** @example 10 */
+            /**
+             * @description Optional percent of vesAmount used when applicationFeeVes is omitted. When both are omitted and merchantId is set, the merchant's commission (or the tenant default commission) applies.
+             * @example 10
+             */
             applicationFeePercent?: number;
         };
         C2pIntentResponseDto: {
@@ -2307,7 +2313,7 @@ export interface components {
              */
             applicationFeeVes?: string;
             /**
-             * @description Optional percent of vesAmount used when applicationFeeVes is omitted.
+             * @description Optional percent of vesAmount used when applicationFeeVes is omitted. When both are omitted and merchantId is set, the merchant's commission (or the tenant default commission) applies.
              * @example 10
              */
             applicationFeePercent?: number;
@@ -2441,7 +2447,10 @@ export interface components {
              * @example 50.00
              */
             applicationFeeVes?: string;
-            /** @example 10 */
+            /**
+             * @description Optional percent of vesAmount used when applicationFeeVes is omitted. When both are omitted and merchantId is set, the merchant's commission (or the tenant default commission) applies.
+             * @example 10
+             */
             applicationFeePercent?: number;
         };
         PagoMovilReceivingAccountDto: {
@@ -2541,6 +2550,11 @@ export interface components {
             isActive: boolean;
             /** @description When true, available balance is auto-paid to the default verified method. */
             autoPayoutEnabled?: boolean;
+            /**
+             * @description Merchant-specific marketplace commission percent. null = the tenant's default commission applies.
+             * @example 12.5
+             */
+            applicationFeePercent?: number | null;
             /** @description Default method bank code (compat) */
             bankCode?: string;
             /** @description Masked default method phone (compat) */
@@ -2720,6 +2734,11 @@ export interface components {
             isActive?: boolean;
             /** @description When true, a cron job automatically pays available seller balance to the default verified Pago Móvil method. */
             autoPayoutEnabled?: boolean;
+            /**
+             * @description Negotiated marketplace commission (percent of vesAmount) retained from payments tagged with this merchant when the request sends no applicationFeeVes / applicationFeePercent. null clears the override so the tenant's default commission applies.
+             * @example 12.5
+             */
+            applicationFeePercent?: number | null;
         };
         CreateCheckoutSessionDto: {
             /**

@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.2.1
+
+### Patch Changes
+
+- 176335f: `merchants.update()` accepts `applicationFeePercent` to set a merchant's negotiated marketplace commission (`null` returns the merchant to the tenant's default commission), and merchant responses include it. Charges that pass `merchantId` without `applicationFeeVes` / `applicationFeePercent` now apply that commission.
+
 ## 0.2.0
 
 ### Minor Changes
