@@ -21,6 +21,8 @@ export const WEBHOOK_EVENT_NAMES = [
   'merchant.wallet_credit',
   'payout.completed',
   'payout.failed',
+  'conversion.completed',
+  'conversion.canceled',
   'tenant.status_changed',
   'tenant.api_key.created',
   'tenant.api_key.rotated',

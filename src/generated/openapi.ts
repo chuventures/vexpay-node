@@ -429,10 +429,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get USDT balance
-         * @description USDT available for payouts and USDT reserved by in-flight payouts, from the VEXPay USDT ledger.
+         * Get a stablecoin balance
+         * @description Amount available for payouts and amount reserved by in-flight payouts, in one stablecoin (`currency`, default USDT), from the VEXPay ledger. USDT and USDC balances are separate.
          */
         get: operations["Crypto_getBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/crypto/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get all stablecoin balances
+         * @description One balance per stablecoin (USDT, USDC).
+         */
+        get: operations["Crypto_getBalances"];
         put?: never;
         post?: never;
         delete?: never;
@@ -451,8 +471,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Get or create a USDT deposit address
-         * @description Returns the static USDT address for one of your customers on one network. Calling again returns the same address. Deposits are credited to your USDT balance (net of the USDT fee) and reported with `payment.completed` carrying `customerRef`.
+         * Get or create a deposit address
+         * @description Returns the static address for one of your customers, one stablecoin (`currency`, default USDT) and one network. Calling again returns the same address. Deposits are credited to that stablecoin's balance (net of the fee) and reported with `payment.completed` carrying `customerRef` and `currency`. A deposit of the other stablecoin to this address is credited in the stablecoin that arrived when your account accepts it on that network.
          */
         post: operations["Crypto_createDepositAddress"];
         delete?: never;
@@ -469,8 +489,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List USDT networks
-         * @description Enabled networks with the payout fee and whether a payout of `amountUsdt` can be sent now.
+         * List networks
+         * @description Enabled networks for one stablecoin (`currency`, default USDT) with the payout fee and whether a payout of `amount` can be sent now.
          */
         get: operations["Crypto_listNetworks"];
         put?: never;
@@ -491,8 +511,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Send USDT to an external address
-         * @description Debits amount + fee from your USDT balance. Payouts within your limits are sent automatically; larger ones wait for review. Completion arrives as `payout.completed` (with `txHash`) or `payout.failed` (refunded). A payout to one of your own deposit addresses settles instantly inside VEXPay with no network fee.
+         * Send a stablecoin to an external address
+         * @description Debits amount + fee from your balance of `currency` (default USDT); USDC payouts never draw on USDT and vice versa. Payouts within your limits are sent automatically; larger ones wait for review. Completion arrives as `payout.completed` (with `txHash`) or `payout.failed` (refunded). A payout to one of your own deposit addresses settles instantly inside VEXPay with no network fee.
          */
         post: operations["Crypto_createPayout"];
         delete?: never;
@@ -508,10 +528,91 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Retrieve a USDT payout */
+        /** Retrieve a stablecoin payout */
         get: operations["Crypto_getPayout"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversions/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quote a VES → USDT conversion
+         * @description Locks a rate for 60 seconds. Send the VES you want to spend (`sourceAmountVes`) or the USDT you want to receive (`targetAmountUsdt`). The rate is the market USDT/VES rate plus your spread; USDT is rounded down and VES up to the cent.
+         */
+        post: operations["Conversions_createQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List conversions
+         * @description Newest first, cursor-paginated.
+         */
+        get: operations["Conversions_list"];
+        put?: never;
+        /**
+         * Convert VES to USDT
+         * @description Accepts a quote. The VES is debited from your available balance immediately and the conversion is `PENDING` until VEXPay delivers the USDT to your USDT balance (`conversion.completed`). A pending conversion can be canceled; if VEXPay cannot fulfil it, it is canceled and the VES is returned (`conversion.canceled`). In test mode conversions complete immediately. Send an `Idempotency-Key` header to retry safely.
+         */
+        post: operations["Conversions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a conversion */
+        get: operations["Conversions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/conversions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a pending conversion
+         * @description Returns the VES to your available balance.
+         */
+        post: operations["Conversions_cancel"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1155,6 +1256,11 @@ export interface components {
             feesVes: string;
             /** @example 1000.00 */
             paidOutVes: string;
+            /**
+             * @description Net VES spent on VES→USDT conversions.
+             * @example 0.00
+             */
+            convertedVes: string;
             /** @example 100.00 */
             reserveVes: string;
             /** @example 8650.00 */
@@ -1197,7 +1303,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1206,7 +1312,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1227,7 +1333,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -1990,20 +2096,37 @@ export interface components {
             ip?: string;
         };
         CryptoBalanceDto: {
-            /** @example USDT */
-            currency: string;
             /**
-             * @description USDT available for payouts (ledger).
+             * @example USDT
+             * @enum {string}
+             */
+            currency: "USDT" | "USDC";
+            /**
+             * @description Available for payouts, in `currency` (ledger).
              * @example 97.00
              */
-            availableUsdt: string;
+            available: string;
             /**
-             * @description USDT reserved by payouts that have not completed yet.
+             * @description Reserved by payouts that have not completed yet, in `currency`.
              * @example 50.10
              */
-            pendingPayoutUsdt: string;
+            pendingPayout: string;
+            /**
+             * @description USDT only: same as `available`.
+             * @example 97.00
+             */
+            availableUsdt?: string;
+            /**
+             * @description USDT only: same as `pendingPayout`.
+             * @example 50.10
+             */
+            pendingPayoutUsdt?: string;
             /** Format: date-time */
             asOf: string;
+        };
+        CryptoBalancesDto: {
+            /** @description One balance per stablecoin (USDT, USDC). */
+            data: components["schemas"]["CryptoBalanceDto"][];
         };
         CreateDepositAddressDto: {
             /**
@@ -2012,18 +2135,29 @@ export interface components {
              */
             customerRef: string;
             /**
+             * @description USDT: TRC20, BEP20, POLYGON, SOL, TON, ARB1. USDC: POLYGON, BASE.
              * @example BEP20
              * @enum {string}
              */
-            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1";
+            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1" | "BASE";
+            /**
+             * @description Stablecoin the address receives.
+             * @default USDT
+             * @example USDT
+             * @enum {string}
+             */
+            currency?: "USDT" | "USDC";
         };
         DepositAddressDto: {
             /** @example user_123 */
             customerRef: string;
             /** @example BEP20 */
             network: string;
-            /** @example USDT */
-            currency: string;
+            /**
+             * @example USDT
+             * @enum {string}
+             */
+            currency: "USDT" | "USDC";
             /** @example 0x9f3c… */
             address: string;
             /** @description Destination tag / memo the payer must include (TON). */
@@ -2034,35 +2168,69 @@ export interface components {
             createdAt: string;
         };
         CryptoNetworkDto: {
+            /**
+             * @example USDT
+             * @enum {string}
+             */
+            currency: "USDT" | "USDC";
             /** @example POLYGON */
             network: string;
             /** @example Polygon */
             displayName: string;
             receiveEnabled: boolean;
             payoutEnabled: boolean;
-            /** @example 0.10 */
-            payoutFeeUsdt: string;
-            /** @example 1.00 */
-            minPayoutUsdt: string;
+            /**
+             * @description Payout fee in `currency`.
+             * @example 0.10
+             */
+            payoutFee: string;
+            /**
+             * @description Minimum payout in `currency`.
+             * @example 1.00
+             */
+            minPayout: string;
+            /**
+             * @description USDT only: same as `payoutFee`.
+             * @example 0.10
+             */
+            payoutFeeUsdt?: string;
+            /**
+             * @description USDT only: same as `minPayout`.
+             * @example 1.00
+             */
+            minPayoutUsdt?: string;
             tagRequired: boolean;
             /** @description Whether a payout of the requested amount can be sent on this network now. */
             available: boolean;
         };
         CreateCryptoPayoutDto: {
             /**
+             * @description Stablecoin to send; debits that balance.
+             * @default USDT
+             * @example USDT
+             * @enum {string}
+             */
+            currency?: "USDT" | "USDC";
+            /**
+             * @description USDT: TRC20, BEP20, POLYGON, SOL, TON, ARB1. USDC: POLYGON, BASE.
              * @example POLYGON
              * @enum {string}
              */
-            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1";
+            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1" | "BASE";
             /** @example 0x9f3c4e1b2a7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e */
             address: string;
             /** @description Destination tag / memo (required on TON). */
             tag?: string;
             /**
-             * @description Amount the destination receives, in USDT (max 2 decimals).
+             * @description Amount the destination receives, in `currency` (max 2 decimals).
              * @example 50.00
              */
-            amountUsdt: string;
+            amount?: string;
+            /**
+             * @description USDT only: alias of `amount`.
+             * @example 50.00
+             */
+            amountUsdt?: string;
             /**
              * @description Your customer reference, echoed on webhooks.
              * @example user_123
@@ -2078,20 +2246,36 @@ export interface components {
             id: string;
             /** @example crypto.payout */
             object: string;
-            /** @example USDT */
-            currency: string;
+            /**
+             * @example USDT
+             * @enum {string}
+             */
+            currency: "USDT" | "USDC";
             /** @enum {string} */
             status: "pending" | "processing" | "completed" | "failed";
             network: string;
             address: string;
             tag?: string;
-            /** @example 50.00 */
-            amountUsdt: string;
             /**
-             * @description Network fee + margin (0 for internal).
+             * @description Amount sent, in `currency`.
+             * @example 50.00
+             */
+            amount: string;
+            /**
+             * @description Network fee + margin, in `currency` (0 for internal).
              * @example 0.10
              */
-            feeUsdt: string;
+            fee: string;
+            /**
+             * @description USDT only: same as `amount`.
+             * @example 50.00
+             */
+            amountUsdt?: string;
+            /**
+             * @description USDT only: same as `fee`.
+             * @example 0.10
+             */
+            feeUsdt?: string;
             customerRef?: string;
             merchantId?: string;
             idempotencyKey: string;
@@ -2103,6 +2287,94 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             completedAt?: string;
+        };
+        CreateConversionQuoteDto: {
+            /**
+             * @description VES to spend. Send this or `targetAmountUsdt`, not both.
+             * @example 10000.00
+             */
+            sourceAmountVes?: string;
+            /**
+             * @description USDT to receive. Send this or `sourceAmountVes`, not both.
+             * @example 50.00
+             */
+            targetAmountUsdt?: string;
+        };
+        ConversionQuoteDto: {
+            id: string;
+            /** @example conversion_quote */
+            object: string;
+            /**
+             * @description VES per 1 USDT you get: market rate plus your spread.
+             * @example 998.8299
+             */
+            rate: string;
+            /**
+             * @description Market USDT/VES rate the quote is based on.
+             * @example 979.2450
+             */
+            marketRate: string;
+            /**
+             * @description Your spread, in percent.
+             * @example 2.0000
+             */
+            spreadPercent: string;
+            /**
+             * @example market
+             * @enum {string}
+             */
+            rateSource: "market";
+            /** @example 10000.00 */
+            sourceAmountVes: string;
+            /**
+             * @description Rounded down to the cent.
+             * @example 10.01
+             */
+            targetAmountUsdt: string;
+            /** @description The quote can be accepted until this time (60 seconds). */
+            expiresAt: string;
+            createdAt: string;
+        };
+        CreateConversionDto: {
+            /** @description A live quote from `POST /v1/conversions/quotes`. Each quote can be used once. */
+            quoteId: string;
+            /**
+             * @description Your reference, echoed on the conversion and its webhooks.
+             * @example treasury-2026-10-03
+             */
+            reference?: string;
+        };
+        ConversionDto: {
+            id: string;
+            /** @example conversion */
+            object: string;
+            /** @enum {string} */
+            status: "PENDING" | "COMPLETED" | "CANCELED";
+            reference: string | null;
+            /** @example 998.8299 */
+            rate: string;
+            /** @example 979.2450 */
+            marketRate: string;
+            /** @example 2.0000 */
+            spreadPercent: string;
+            /**
+             * @example market
+             * @enum {string}
+             */
+            rateSource: "market";
+            /** @example 10000.00 */
+            sourceAmountVes: string;
+            /** @example 10.01 */
+            targetAmountUsdt: string;
+            createdAt: string;
+            completedAt: string | null;
+            canceledAt: string | null;
+            cancelReason: string | null;
+        };
+        ConversionListDto: {
+            items: components["schemas"]["ConversionDto"][];
+            /** @description Pass as `cursor` to get the next page. */
+            nextCursor: string | null;
         };
         BankResponseDto: {
             /**
@@ -2779,7 +3051,7 @@ export interface components {
              */
             allowedOrigins?: string[];
             /** @description Payment methods offered. Defaults to every method your account can accept. */
-            methods?: ("c2p" | "vpos" | "usdt")[];
+            methods?: ("c2p" | "vpos" | "usdt" | "usdc")[];
             /**
              * @description Up to 20 string key/value pairs (keys ≤ 40 chars, values ≤ 500 chars).
              * @example {
@@ -2815,7 +3087,7 @@ export interface components {
                 [key: string]: string;
             };
             allowedOrigins: string[];
-            methods: ("c2p" | "vpos" | "usdt")[];
+            methods: ("c2p" | "vpos" | "usdt" | "usdc")[];
             successUrl?: string | null;
             cancelUrl?: string | null;
             /** @description Latest payment for this session, once one exists. */
@@ -4951,7 +5223,9 @@ export interface operations {
     };
     Crypto_getBalance: {
         parameters: {
-            query?: never;
+            query?: {
+                currency?: "USDT" | "USDC";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4964,6 +5238,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CryptoBalanceDto"];
+                };
+            };
+            /** @description `unsupported_currency`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `method_not_allowed` — USDC is not enabled for this account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_getBalances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CryptoBalancesDto"];
                 };
             };
             /** @description Missing, invalid, or inactive tenant API key. */
@@ -5028,7 +5366,7 @@ export interface operations {
                     "application/json": components["schemas"]["DepositAddressDto"];
                 };
             };
-            /** @description `unsupported_network` or invalid `customerRef`. */
+            /** @description `unsupported_currency`, `unsupported_network` or invalid `customerRef`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5046,7 +5384,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description `method_not_allowed` — USDT is not enabled for this account. */
+            /** @description `method_not_allowed` — that stablecoin is not enabled for this account. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5078,7 +5416,10 @@ export interface operations {
     Crypto_listNetworks: {
         parameters: {
             query?: {
+                /** @description Alias of `amount`. */
                 amountUsdt?: string;
+                currency?: "USDT" | "USDC";
+                amount?: string;
             };
             header?: never;
             path?: never;
@@ -5094,6 +5435,15 @@ export interface operations {
                     "application/json": components["schemas"]["CryptoNetworkDto"][];
                 };
             };
+            /** @description `unsupported_currency`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Missing, invalid, or inactive tenant API key. */
             401: {
                 headers: {
@@ -5103,7 +5453,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description `method_not_allowed` — USDT is not enabled for this account. */
+            /** @description `method_not_allowed` — that stablecoin is not enabled for this account. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5166,7 +5516,7 @@ export interface operations {
                     "application/json": components["schemas"]["CryptoPayoutDto"];
                 };
             };
-            /** @description `unsupported_network`, `invalid_address` or `invalid_data`. */
+            /** @description `unsupported_currency`, `unsupported_network`, `invalid_address` or `invalid_data`. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5184,7 +5534,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            /** @description `method_not_allowed` — that stablecoin is not enabled for this account. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5261,6 +5611,394 @@ export interface operations {
             };
             /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Conversions_createQuote: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversionQuoteDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionQuoteDto"];
+                };
+            };
+            /** @description `invalid_amount` — send exactly one positive amount. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `conversions_not_enabled`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `amount_below_minimum` or `insufficient_balance`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `rate_unavailable` — no current market rate; retry shortly. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Conversions_list: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "COMPLETED" | "CANCELED";
+                cursor?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionListDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Conversions_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateConversionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `conversions_not_enabled` or `live_mode_not_activated`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Unknown quote. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `quote_used`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `quote_expired` — request a new quote. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `insufficient_balance` or `daily_limit_exceeded`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Conversions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Conversions_cancel: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `conversion_not_cancelable` — already completed or canceled. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

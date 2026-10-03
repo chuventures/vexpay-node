@@ -2,14 +2,21 @@ import type { RequestOptions } from '../core';
 import { APIResource } from '../resource';
 import type { QueryParams, RequestBody } from '../types';
 
-/** Your USDT balance (USDT settles in USDT, never converted to VES). */
+/** One stablecoin balance (`currency`: USDT by default, or USDC). Never converted to VES. */
 export class CryptoBalance extends APIResource {
-  retrieve(options?: RequestOptions) {
-    return this.call('Crypto_getBalance', {}, options);
+  retrieve(params: QueryParams<'Crypto_getBalance'> = {}, options?: RequestOptions) {
+    return this.call('Crypto_getBalance', { query: params }, options);
   }
 }
 
-/** Static USDT deposit addresses per customer and network. */
+/** Every stablecoin balance (USDT and USDC). */
+export class CryptoBalances extends APIResource {
+  list(options?: RequestOptions) {
+    return this.call('Crypto_getBalances', {}, options);
+  }
+}
+
+/** Static deposit addresses per customer, stablecoin (`currency`) and network. */
 export class DepositAddresses extends APIResource {
   /** Get or create — calling again for the same customer and network returns the same address. */
   create(params: RequestBody<'Crypto_createDepositAddress'>, options?: RequestOptions) {
@@ -17,14 +24,14 @@ export class DepositAddresses extends APIResource {
   }
 }
 
-/** Enabled USDT networks with the payout fee and availability for an amount. */
+/** Enabled networks for one stablecoin (`currency`) with the payout fee and availability for an amount. */
 export class CryptoNetworks extends APIResource {
   list(params: QueryParams<'Crypto_listNetworks'> = {}, options?: RequestOptions) {
     return this.call('Crypto_listNetworks', { query: params }, options);
   }
 }
 
-/** USDT payouts to external addresses. `idempotencyKey` (in the body) makes retries safe. */
+/** Stablecoin payouts to external addresses (`currency`: USDT or USDC). `idempotencyKey` (in the body) makes retries safe. */
 export class CryptoPayouts extends APIResource {
   create(params: RequestBody<'Crypto_createPayout'>, options?: RequestOptions) {
     return this.call('Crypto_createPayout', { body: params }, options);
@@ -35,9 +42,10 @@ export class CryptoPayouts extends APIResource {
   }
 }
 
-/** USDT: deposit addresses, balance, networks and payouts. */
+/** Stablecoins (USDT, USDC): deposit addresses, balances, networks and payouts. */
 export class Crypto extends APIResource {
   readonly balance = new CryptoBalance(this.http);
+  readonly balances = new CryptoBalances(this.http);
   readonly depositAddresses = new DepositAddresses(this.http);
   readonly networks = new CryptoNetworks(this.http);
   readonly payouts = new CryptoPayouts(this.http);

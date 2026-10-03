@@ -1,5 +1,12 @@
 # @vexpay/node
 
+## 0.3.0
+
+### Minor Changes
+
+- 24c3d62: Add USDC (Polygon and Base) to `crypto`: `crypto.balance.retrieve()`, `crypto.depositAddresses.create()`, `crypto.networks.list()` and `crypto.payouts.create()` accept `currency: 'USDT' | 'USDC'` (default USDT, so existing calls are unchanged). New `crypto.balances.list()` returns every stablecoin balance. Payouts take `amount` (`amountUsdt` stays as a USDT-only alias), and crypto responses and `payment.completed` / `payout.*` events add `currency`, `amount` and `fee` for both coins. Checkout sessions accept `methods: ['usdc']`.
+- 6bf806e: Add `conversions` to turn available VES into your USDT balance: `conversions.quotes.create()` locks a rate for 60 seconds (`sourceAmountVes` or `targetAmountUsdt`), `conversions.create({ quoteId })` debits the VES and returns a `PENDING` conversion, plus `conversions.retrieve()`, `conversions.list()` (auto-paginating) and `conversions.cancel()`. New webhook events `conversion.completed` and `conversion.canceled`; the VES balance adds `convertedVes`. Conversions are enabled per account (403 `conversions_not_enabled` otherwise).
+
 ## 0.2.1
 
 ### Patch Changes
