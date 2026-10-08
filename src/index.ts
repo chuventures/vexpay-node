@@ -30,5 +30,6 @@ export {
   type WebhookEvent,
   type WebhookEventName,
   type PaymentWebhookData,
+  type CopPaymentWebhookData,
 } from './webhooks';
 export { VERSION } from './version';

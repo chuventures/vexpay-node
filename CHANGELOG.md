@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.6.0
+
+### Minor Changes
+
+- Add `cop` — Colombian pesos through Bre-B, Nequi and Daviplata: `cop.payments.create()`, `retrieve()`, `submitOtp()`, `cancel()`, `refund()` and `cop.balance.retrieve()`. COP must be enabled on your account. New `CopPaymentWebhookData` type for `payment.*` events with `method: "COP"` (now part of the `method` union).
+
 ## 0.5.0
 
 ### Minor Changes

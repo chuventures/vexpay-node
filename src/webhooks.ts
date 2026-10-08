@@ -40,7 +40,8 @@ export interface PaymentWebhookData {
   paymentId: string;
   externalRef?: string;
   status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELED' | 'REVERSED';
-  method: 'C2P' | 'VPOS' | 'PAGO_MOVIL' | 'DEBITO_INMEDIATO';
+  /** `COP` payments carry a different shape: narrow on `method === 'COP'` and read them as {@link CopPaymentWebhookData}. */
+  method: 'C2P' | 'VPOS' | 'PAGO_MOVIL' | 'DEBITO_INMEDIATO' | 'COP';
   usdAmount: number;
   vesAmount: number;
   bcvRate: number;
@@ -64,6 +65,34 @@ export interface PaymentWebhookData {
   reversedAt?: string;
   reversalRef?: string;
   reversalTxId?: number;
+  livemode: boolean;
+  /** Present when the payment came from a checkout session. */
+  checkoutSession?: { id: string; reference: string | null; metadata: Record<string, string> };
+}
+
+/**
+ * `payment.*` data for a Colombian peso payment (`method: "COP"`). Amounts are whole pesos.
+ * `amountUsd` and `copRate` are present only for hosted-checkout payments.
+ */
+export interface CopPaymentWebhookData {
+  id: string;
+  paymentId: string;
+  method: 'COP';
+  currency: 'COP';
+  status: 'pending' | 'completed' | 'failed' | 'canceled' | 'refunded';
+  channel: 'breb' | 'nequi' | 'daviplata';
+  amountCop: number;
+  feeCop?: number;
+  amountUsd?: string;
+  copRate?: string;
+  reference?: string;
+  externalRef?: string;
+  metadata: Record<string, string>;
+  failureCode?: 'expired' | 'rejected' | 'processor_error' | 'processor_unknown';
+  expiresAt?: string;
+  createdAt: string;
+  completedAt?: string;
+  tenantName: string;
   livemode: boolean;
   /** Present when the payment came from a checkout session. */
   checkoutSession?: { id: string; reference: string | null; metadata: Record<string, string> };

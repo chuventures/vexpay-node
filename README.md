@@ -87,6 +87,8 @@ if (current.status === 'paid') {
 }
 ```
 
+The hosted page lets the buyer pick the currency — bolívares, stablecoins or Colombian pesos — and offers every method your account accepts. Limit it with `methods` (`c2p`, `vpos`, `usdt`, `usdc`, `cop`).
+
 ## USDT
 
 USDT settles in USDT, into your VEXPay USDT balance (never converted to VES). It must be enabled on your account — otherwise these calls fail with `method_not_allowed` (403). Pay-ins cost 2.5 % + 0.50 USDT; payouts cost the network fee listed by `crypto.networks.list()`.
@@ -166,6 +168,50 @@ for await (const c of vexpay.conversions.list({ status: 'PENDING' })) {
 }
 await vexpay.conversions.cancel(conversion.id); // only while PENDING
 ```
+
+## Colombian pesos (COP)
+
+Collect pesos from buyers in Colombia through Bre-B, Nequi or Daviplata. Amounts are whole pesos, payments complete asynchronously (`payment.completed` / `payment.failed`), and completed payments go to your COP balance net of the COP fee. COP must be enabled on your account — otherwise the calls fail with `method_not_allowed` (403).
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+// Bre-B: no buyer data. Show next.qrPngBase64 as an image and next.transferKey as text.
+const breb = await vexpay.cop.payments.create(
+  { amountCop: 100000, channel: 'breb', reference: 'order-1042' },
+  { idempotencyKey: 'order-1042-cop' },
+);
+
+// Nequi: the buyer approves a push in the Nequi app.
+await vexpay.cop.payments.create({
+  amountCop: 50000,
+  channel: 'nequi',
+  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890' },
+});
+
+// Daviplata: the buyer reads you the SMS code; submit it.
+const davi = await vexpay.cop.payments.create({
+  amountCop: 50000,
+  channel: 'daviplata',
+  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890' },
+});
+await vexpay.cop.payments.submitOtp(davi.id, { otp: '123456' });
+
+const status = (await vexpay.cop.payments.retrieve(breb.id)).status; // pending | completed | failed | canceled | refunded
+const { availableCop } = await vexpay.cop.balance.retrieve();
+```
+
+`cancel(id)` cancels a pending payment and `refund(id)` refunds a completed one in full within 96 hours. A webhook for a COP payment has `data.method === 'COP'`; read it as `CopPaymentWebhookData`.
+
+**Test mode** (test API keys use a sandbox):
+
+| Channel | What to use | Result |
+|---|---|---|
+| Bre-B | No buyer data | QR and key from the sandbox. **Never send real money to them** — sandbox keys are reachable from real banks and the money is not credited. |
+| Nequi | Any valid data, e.g. phone `3001234567`, `CC` `1234567890`, any email | Completes on its own within about a minute |
+| Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp` |
 
 ## Webhooks
 
@@ -354,6 +400,8 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `crypto.payouts` | `create`, `retrieve` |
 | `conversions` | `create`, `list`, `retrieve`, `cancel` |
 | `conversions.quotes` | `create` |
+| `cop.payments` | `create`, `retrieve`, `submitOtp`, `cancel`, `refund` |
+| `cop.balance` | `retrieve` |
 | `merchants` | `create`, `list`, `retrieve`, `retrieveByRef`, `update`, `delete`, `retrieveBalance`, `transfer`, `listAuditEvents`, `startVerification`, `confirmVerification` |
 | `merchants.payoutMethods` | `list`, `create`, `setDefault`, `delete`, `startVerification`, `confirmVerification` |
 | `payouts` | `create`, `createInstant`, `createBatch`, `list`, `retrieve`, `retrieveByRef` |

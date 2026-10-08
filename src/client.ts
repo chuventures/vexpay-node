@@ -10,6 +10,7 @@ import {
 } from './resources/account';
 import { Checkout, PaymentLinks, Products } from './resources/commerce';
 import { Conversions } from './resources/conversions';
+import { Cop } from './resources/cop';
 import { Crypto } from './resources/crypto';
 import { Merchants } from './resources/merchants';
 import { Payments } from './resources/payments';
@@ -43,6 +44,8 @@ export class VexPay {
   readonly crypto: Crypto;
   /** Convert available VES to USDT (enabled per account). */
   readonly conversions: Conversions;
+  /** Colombian pesos: Bre-B, Nequi and Daviplata payments and the COP balance. */
+  readonly cop: Cop;
   readonly products: Products;
   readonly paymentLinks: PaymentLinks;
   readonly tenantPayoutAccount: TenantPayoutAccount;
@@ -78,6 +81,7 @@ export class VexPay {
     this.payouts = new Payouts(this.http);
     this.crypto = new Crypto(this.http);
     this.conversions = new Conversions(this.http);
+    this.cop = new Cop(this.http);
     this.products = new Products(this.http);
     this.paymentLinks = new PaymentLinks(this.http);
     this.tenantPayoutAccount = new TenantPayoutAccount(this.http);
