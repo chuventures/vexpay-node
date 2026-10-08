@@ -5,6 +5,7 @@ export type OperationId = keyof operations;
 
 export const ROUTES = {
   Balance_getBalance: { method: 'GET', path: '/v1/balance' },
+  Balance_listTransactions: { method: 'GET', path: '/v1/balance/transactions' },
   CheckoutSessions_create: { method: 'POST', path: '/v1/checkout/sessions' },
   CheckoutSessions_retrieve: { method: 'GET', path: '/v1/checkout/sessions/{id}' },
   Conversions_cancel: { method: 'POST', path: '/v1/conversions/{id}/cancel' },

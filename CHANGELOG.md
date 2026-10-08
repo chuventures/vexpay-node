@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.4.0
+
+### Minor Changes
+
+- 980fe3b: Add `balance.transactions.list()` — every movement in your VES balance (payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers, conversions), newest first and auto-paginating. The amounts sum to `ledgerNetVes` from `balance.retrieve()`, so your ledger can reconcile automatically. New webhook events `payment.chargeback` and `payment.chargeback_closed` report bank chargebacks on card payments (with `ledgerEntryIds` matching `balance.transactions`); `payment.reversed` adds `reversalType` (`reversal` | `chargeback`), and the balance adds `chargebackFeesVes`.
+
 ## 0.3.0
 
 ### Minor Changes

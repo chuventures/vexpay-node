@@ -146,7 +146,7 @@ Responses and events include `currency`, `amount` and `fee` for both coins (`amo
 
 ## Convert VES to USDT
 
-Turn available VES into your USDT balance. A quote locks the rate (market USDT/VES rate plus your spread) for 60 seconds; accepting it debits the VES at once and returns a `PENDING` conversion. VEXPay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES returned). Conversions must be enabled on your account — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately.
+Turn available VES into your USDT balance. A quote locks the rate (market USDT/VES rate plus your spread) for 60 seconds; accepting it debits the VES at once and returns a `PENDING` conversion. VEXPay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES returned). Conversions are on for every account that has USDT enabled — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -200,6 +200,27 @@ export async function POST(request: Request): Promise<Response> {
 With Express, mount `express.raw({ type: 'application/json' })` on the webhook route and pass `req.body` (a Buffer) and `req.headers['vexpay-signature']`.
 
 Deliveries older than 5 minutes are rejected as possible replays; pass `{ toleranceSeconds }` to change that. Each delivery also carries a `VexPay-Event-Id` header you can use to deduplicate. In your own tests, sign fixtures with `vexpay.webhooks.generateTestHeader({ payload, secret })`.
+
+## Reconcile your balance
+
+`balance.transactions.list()` returns every movement in your VES balance, newest first. The amounts always add up to `ledgerNetVes`, so you can rebuild your balance and find exactly which movement changed it. Card chargebacks arrive as `payment.chargeback` events whose `ledgerEntryIds` match these movements.
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+let total = 0;
+for await (const movement of vexpay.balance.transactions.list({ limit: 100 })) {
+  total += Number(movement.amountVes); // e.g. type 'chargeback', amountVes '-4000.00'
+}
+const balance = await vexpay.balance.retrieve();
+console.log(total.toFixed(2) === balance.ledgerNetVes);
+
+// Only the movements of one payment (e.g. after a payment.chargeback event):
+const page = await vexpay.balance.transactions.list({ paymentId: 'pay_…', type: ['chargeback', 'chargeback_fee'] });
+console.log(page.items.map((m) => [m.type, m.amountVes]));
+```
 
 ## Errors
 
@@ -319,6 +340,7 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `banks` | `list` |
 | `quotes` | `retrieve` |
 | `balance` | `retrieve` |
+| `balance.transactions` | `list` |
 | `payments` | `retrieve`, `retrieveByRef`, `reverse` |
 | `payments.c2p` | `request`, `execute` |
 | `payments.vpos` | `create` |

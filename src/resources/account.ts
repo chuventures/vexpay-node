@@ -17,8 +17,21 @@ export class Quotes extends APIResource {
   }
 }
 
+/** Every movement in your VES balance (payments, fees, payouts, chargebacks, …), newest first. */
+export class BalanceTransactions extends APIResource {
+  /** Await for one page, or `for await` over every movement. The amounts sum to `ledgerNetVes`. */
+  list(params: QueryParams<'Balance_listTransactions'> = {}, options?: RequestOptions) {
+    return new PagePromise(
+      (cursor) => this.call('Balance_listTransactions', { query: { ...params, cursor } }, options),
+      params.cursor,
+    );
+  }
+}
+
 /** Your platform balance. */
 export class Balance extends APIResource {
+  readonly transactions = new BalanceTransactions(this.http);
+
   retrieve(options?: RequestOptions) {
     return this.call('Balance_getBalance', {}, options);
   }

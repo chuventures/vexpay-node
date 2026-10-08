@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/balance/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List balance movements
+         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes`, `availableVes`), so you can reconcile your own ledger automatically. Page with `cursor`.
+         */
+        get: operations["Balance_listTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/webhooks": {
         parameters: {
             query?: never;
@@ -1261,6 +1281,11 @@ export interface components {
              * @example 0.00
              */
             convertedVes: string;
+            /**
+             * @description Net card chargeback fees charged (fees minus fees returned on won disputes).
+             * @example 0.00
+             */
+            chargebackFeesVes: string;
             /** @example 100.00 */
             reserveVes: string;
             /** @example 8650.00 */
@@ -1286,6 +1311,48 @@ export interface components {
             /** @example 0.00 */
             feeFixedUsd: string;
         };
+        BalanceTransactionDto: {
+            /**
+             * Format: uuid
+             * @description Stable id of the movement; never changes or disappears.
+             */
+            id: string;
+            /**
+             * @example chargeback
+             * @enum {string}
+             */
+            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal";
+            /**
+             * @description Signed VES amount (negative = money out of your balance).
+             * @example -4000.00
+             */
+            amountVes: string;
+            /** Format: uuid */
+            paymentId?: string;
+            /** Format: uuid */
+            payoutId?: string;
+            /**
+             * Format: uuid
+             * @description Present on chargeback movements.
+             */
+            chargebackId?: string;
+            /** Format: uuid */
+            merchantId?: string;
+            /**
+             * @description externalRef of the linked payment or payout.
+             * @example order-1042
+             */
+            externalRef?: string;
+            /** @example Card chargeback (fraud) */
+            description: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        BalanceTransactionListDto: {
+            items: components["schemas"]["BalanceTransactionDto"][];
+            /** @description Pass as `cursor` to get the next (older) page; null on the last page. */
+            nextCursor: string | null;
+        };
         CreateWebhookDto: {
             /**
              * Format: uri
@@ -1303,7 +1370,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1312,7 +1379,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1333,7 +1400,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -3218,6 +3285,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformBalanceDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Balance_listTransactions: {
+        parameters: {
+            query?: {
+                /** @description ISO 8601, exclusive (createdAt). */
+                to?: string;
+                /** @description ISO 8601, inclusive (createdAt). */
+                from?: string;
+                /** @description Only movements of this payout. */
+                payoutId?: string;
+                /** @description Only movements of this payment. */
+                paymentId?: string;
+                /** @description One or more types (repeat or comma-separate). */
+                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal")[];
+                /** @description `nextCursor` from the previous page. */
+                cursor?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BalanceTransactionListDto"];
+                };
+            };
+            /** @description `invalid_data` — a parameter is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
             /** @description Missing, invalid, or inactive tenant API key. */
