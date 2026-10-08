@@ -3117,8 +3117,8 @@ export interface components {
              *     ]
              */
             allowedOrigins?: string[];
-            /** @description Payment methods offered. Defaults to every method your account can accept. */
-            methods?: ("c2p" | "vpos" | "usdt" | "usdc")[];
+            /** @description Payment methods offered. Defaults to every method your account can accept. `cop` (Colombian pesos: Bre-B, Nequi, Daviplata) needs the COP method on your account. */
+            methods?: ("c2p" | "vpos" | "usdt" | "usdc" | "cop")[];
             /**
              * @description Up to 20 string key/value pairs (keys ≤ 40 chars, values ≤ 500 chars).
              * @example {
@@ -3154,7 +3154,7 @@ export interface components {
                 [key: string]: string;
             };
             allowedOrigins: string[];
-            methods: ("c2p" | "vpos" | "usdt" | "usdc")[];
+            methods: ("c2p" | "vpos" | "usdt" | "usdc" | "cop")[];
             successUrl?: string | null;
             cancelUrl?: string | null;
             /** @description Latest payment for this session, once one exists. */
