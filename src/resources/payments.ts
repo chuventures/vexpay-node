@@ -102,6 +102,11 @@ export class Payments extends APIResource {
   readonly dispersals = new Dispersals(this.http);
   readonly change = new Change(this.http);
 
+  /** Bolívar methods your account can take now (`pago_movil`, `c2p`, `vpos`), with a reason when unavailable. */
+  methods(options?: RequestOptions) {
+    return this.call('Payments_listPaymentMethods', {}, options);
+  }
+
   retrieve(id: string, options?: RequestOptions) {
     return this.call('Payments_getPayment', { path: { id } }, options);
   }

@@ -54,6 +54,7 @@ export const ROUTES = {
   Payments_getPayment: { method: 'GET', path: '/v1/payments/{id}' },
   Payments_getPaymentByRef: { method: 'GET', path: '/v1/payments/by-ref/{externalRef}' },
   Payments_getQuote: { method: 'GET', path: '/v1/quote' },
+  Payments_listPaymentMethods: { method: 'GET', path: '/v1/payment-methods' },
   Payments_requestC2p: { method: 'POST', path: '/v1/payments/c2p/request' },
   Payments_reversePayment: { method: 'POST', path: '/v1/payments/{id}/reverse' },
   Payments_verifyPagoMovil: { method: 'POST', path: '/v1/payments/pago-movil/verify' },

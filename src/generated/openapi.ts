@@ -877,6 +877,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/payment-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the bolívar payment methods your account can take
+         * @description Which VES pay-in methods are available to your account right now: `pago_movil` (customer-sent Pago Móvil, also requires the receiving account to be configured), `c2p` (bank debit with the customer's OTP) and `vpos` (card). Use it to decide which options to show; cache it for a few minutes.
+         */
+        get: operations["Payments_listPaymentMethods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/payments/pago-movil/receiving-account": {
         parameters: {
             query?: never;
@@ -2873,8 +2893,16 @@ export interface components {
             };
         };
         C2pRequestDto: {
-            /** @example 25 */
-            usdAmount: number;
+            /**
+             * @description USD amount. Required unless vesAmount is set. When only usdAmount is set, VES is derived at the live BCV rate.
+             * @example 25
+             */
+            usdAmount?: number;
+            /**
+             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at BCV (it wins over usdAmount). The intent keeps this amount until it is executed.
+             * @example 50
+             */
+            vesAmount?: number;
             /** @example V12345678 */
             debtorId: string;
             /**
@@ -2992,8 +3020,16 @@ export interface components {
              * @description Pending intent returned by POST /v1/payments/c2p/request.
              */
             intentId?: string;
-            /** @example 25 */
-            usdAmount: number;
+            /**
+             * @description USD amount. Required unless vesAmount or intentId is set. When only usdAmount is set, VES is derived at the live BCV rate.
+             * @example 25
+             */
+            usdAmount?: number;
+            /**
+             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at BCV (it wins over usdAmount). With intentId the amount locked on the intent is charged; amounts sent here must match it (±0.01 Bs / ±$0.01).
+             * @example 50
+             */
+            vesAmount?: number;
             /** @example V12345678 */
             debtorId: string;
             /** @example 584121234567 */
@@ -3163,6 +3199,25 @@ export interface components {
              * @example 10
              */
             applicationFeePercent?: number;
+        };
+        PaymentMethodAvailabilityDto: {
+            /**
+             * @description `pago_movil`: the customer sends a Pago Móvil (verify). `c2p`: bank debit with the customer's OTP. `vpos`: card.
+             * @enum {string}
+             */
+            method: "pago_movil" | "c2p" | "vpos";
+            /** @description Whether your account can take this method right now. */
+            available: boolean;
+            /**
+             * @description Only when available is false. `not_enabled`: the method is not enabled on your account. `receiving_account_not_configured`: Pago Móvil receiving details are not set up yet. `provider_not_configured`: temporarily unavailable in this mode — contact support.
+             * @enum {string}
+             */
+            reason?: "not_enabled" | "receiving_account_not_configured" | "provider_not_configured";
+        };
+        PaymentMethodsResponseDto: {
+            /** @description false for test keys. */
+            livemode: boolean;
+            methods: components["schemas"]["PaymentMethodAvailabilityDto"][];
         };
         PagoMovilReceivingAccountDto: {
             /**
@@ -3489,8 +3544,8 @@ export interface components {
              *     ]
              */
             allowedOrigins?: string[];
-            /** @description Payment methods offered. Defaults to every method your account can accept. `cop` (Colombian pesos: Bre-B, Nequi, Daviplata) needs the COP method on your account. */
-            methods?: ("c2p" | "vpos" | "usdt" | "usdc" | "cop")[];
+            /** @description Payment methods offered. Defaults to every method your account can accept. `c2p` is the bank pull shown as Débito Inmediato; `pago_movil` is a Pago Móvil the buyer sends from their bank app (needs Pago Móvil enabled on your account). `cop` (Colombian pesos: Bre-B, Nequi, Daviplata) needs the COP method on your account. */
+            methods?: ("c2p" | "pago_movil" | "vpos" | "usdt" | "usdc" | "cop")[];
             /**
              * @description Up to 20 string key/value pairs (keys ≤ 40 chars, values ≤ 500 chars).
              * @example {
@@ -3526,7 +3581,7 @@ export interface components {
                 [key: string]: string;
             };
             allowedOrigins: string[];
-            methods: ("c2p" | "vpos" | "usdt" | "usdc" | "cop")[];
+            methods: ("c2p" | "pago_movil" | "vpos" | "usdt" | "usdc" | "cop")[];
             successUrl?: string | null;
             cancelUrl?: string | null;
             /** @description Latest payment for this session, once one exists. */
@@ -7476,6 +7531,70 @@ export interface operations {
             };
             /** @description Carding defense tripped: 3 distinct cards already failed for this payer in the last 30 minutes. */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Payments_listPaymentMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentMethodsResponseDto"];
+                };
+            };
+            /** @description Invalid request or unsupported operation. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

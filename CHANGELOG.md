@@ -1,5 +1,13 @@
 # @vexpay/node
 
+## 0.8.0
+
+### Minor Changes
+
+- Add `payments.methods()` — the bolívar methods your account can take now (`pago_movil`, `c2p`, `vpos`), with a `reason` when unavailable.
+- C2P accepts `vesAmount` on `payments.c2p.request()` and `execute()`: it locks the exact bolívars debited (USD derived at BCV); `usdAmount` is now optional. Executing an intent charges the bolívar amount stored on the intent; amounts sent on execute must match it.
+- Checkout sessions accept `"methods": ["pago_movil"]` (Pago Móvil the buyer sends from their bank app).
+
 ## 0.7.0
 
 ### Minor Changes
