@@ -672,6 +672,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/conversions/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get conversion settings
+         * @description Your spreads, minimum, daily caps, which currencies you can convert from, and auto-convert.
+         */
+        get: operations["ConversionSettings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update auto-convert
+         * @description Set the share (0–100, whole number; 0 = off) of each completed COP pay-in that is converted to USDT automatically. Applies to pay-ins completed after the change. Spreads, minimums and caps can only be changed by VEXPay.
+         */
+        patch: operations["ConversionSettings_update"];
+        trace?: never;
+    };
     "/v1/conversions/quotes": {
         parameters: {
             query?: never;
@@ -682,8 +706,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Quote a VES → USDT conversion
-         * @description Locks a rate for 60 seconds. Send the VES you want to spend (`sourceAmountVes`) or the USDT you want to receive (`targetAmountUsdt`). The rate is the market USDT/VES rate plus your spread; USDT is rounded down and VES up to the cent.
+         * Quote a VES or COP → USDT conversion
+         * @description Locks a rate for 60 seconds. Choose `sourceCurrency` (`VES`, the default, or `COP`), then send the amount you want to spend (`sourceAmount`; VES may also use `sourceAmountVes`) or the USDT you want to receive (`targetAmountUsdt`). The rate is the market USDT rate in that currency plus your spread; USDT is rounded down to the cent, VES up to the cent and COP up to the whole peso.
          */
         post: operations["Conversions_createQuote"];
         delete?: never;
@@ -706,8 +730,8 @@ export interface paths {
         get: operations["Conversions_list"];
         put?: never;
         /**
-         * Convert VES to USDT
-         * @description Accepts a quote. The VES is debited from your available balance immediately and the conversion is `PENDING` until VEXPay delivers the USDT to your USDT balance (`conversion.completed`). A pending conversion can be canceled; if VEXPay cannot fulfil it, it is canceled and the VES is returned (`conversion.canceled`). In test mode conversions complete immediately. Send an `Idempotency-Key` header to retry safely.
+         * Convert VES or COP to USDT
+         * @description Accepts a quote. The VES or COP is debited from your available balance immediately (`conversion.created`) and the conversion is `PENDING` until VEXPay delivers the USDT to your USDT balance (`conversion.completed`). A pending conversion can be canceled; if VEXPay cannot fulfil it, it is canceled and the amount is returned (`conversion.canceled`). In test mode conversions complete immediately. Send an `Idempotency-Key` header to retry safely.
          */
         post: operations["Conversions_create"];
         delete?: never;
@@ -744,7 +768,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel a pending conversion
-         * @description Returns the VES to your available balance.
+         * @description Returns the VES or COP to your available balance.
          */
         post: operations["Conversions_cancel"];
         delete?: never;
@@ -844,7 +868,7 @@ export interface paths {
         put?: never;
         /**
          * Execute a VPOS card charge
-         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at BCV) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: if the same cardHolderId (debtorId) has had 3 distinct cards FAILED on VPOS within 30 minutes, further attempts are blocked (429, code CARD_VELOCITY_BLOCKED) without contacting the bank until the window rolls off.
+         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at BCV) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: if the same cardHolderId (debtorId) has had 3 distinct cards FAILED on VPOS within 30 minutes, further attempts are blocked (429, code CARD_VELOCITY_BLOCKED) without contacting the bank until the window rolls off. Test cards: with a Test key, the VPOS test cards listed at /vpos#test-card return fixed outcomes (approvals, bank declines with their G-codes, a chargeback) without contacting the bank; with a Live key they are refused with 400 test_card_in_live_mode.
          */
         post: operations["Payments_executeVpos"];
         delete?: never;
@@ -1484,7 +1508,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1493,7 +1517,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1514,7 +1538,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -2606,14 +2630,84 @@ export interface components {
             /** Format: date-time */
             asOf: string;
         };
+        CurrencyFlagsDto: {
+            VES: boolean;
+            COP: boolean;
+        };
+        CurrencyAmountsDto: {
+            /** @example 3.0000 */
+            VES: string;
+            /** @example 3.0000 */
+            COP: string;
+        };
+        CurrencyCapsDto: {
+            /**
+             * @description Max VES per Caracas day; `null` = no cap.
+             * @example null
+             */
+            VES: string | null;
+            /**
+             * @description Max COP per Bogotá day; `null` = no cap.
+             * @example 2000000
+             */
+            COP: string | null;
+        };
+        AutoConvertPercentDto: {
+            /**
+             * @description Whole number; 0 = off.
+             * @example 50
+             */
+            percent: number;
+        };
+        AutoConvertDto: {
+            COP: components["schemas"]["AutoConvertPercentDto"];
+        };
+        ConversionSettingsDto: {
+            /** @example conversion_settings */
+            object: string;
+            /** @description Conversions are enabled for your account. */
+            enabled: boolean;
+            /** @description Which currencies you can convert from right now. */
+            sourceCurrencies: components["schemas"]["CurrencyFlagsDto"];
+            /** @description Your spread per source currency, in percent. */
+            spreadPercent: components["schemas"]["CurrencyAmountsDto"];
+            /**
+             * @description Smallest USDT amount a conversion may deliver.
+             * @example 10.00
+             */
+            minimumUsdt: string;
+            dailyMax: components["schemas"]["CurrencyCapsDto"];
+            autoConvert: components["schemas"]["AutoConvertDto"];
+        };
+        UpdateConversionSettingsDto: {
+            /**
+             * @example {
+             *       "COP": {
+             *         "percent": 50
+             *       }
+             *     }
+             */
+            autoConvert: components["schemas"]["AutoConvertDto"];
+        };
         CreateConversionQuoteDto: {
             /**
-             * @description VES to spend. Send this or `targetAmountUsdt`, not both.
+             * @description Currency you convert from. Defaults to `VES`.
+             * @default VES
+             * @enum {string}
+             */
+            sourceCurrency?: "VES" | "COP";
+            /**
+             * @description Amount of `sourceCurrency` to spend (VES: up to 2 decimals; COP: whole pesos). Send this or `targetAmountUsdt`, not both.
+             * @example 1000000
+             */
+            sourceAmount?: string;
+            /**
+             * @description VES only: same as `sourceAmount` (kept for existing integrations).
              * @example 10000.00
              */
             sourceAmountVes?: string;
             /**
-             * @description USDT to receive. Send this or `sourceAmountVes`, not both.
+             * @description USDT to receive. Send this or `sourceAmount`, not both.
              * @example 50.00
              */
             targetAmountUsdt?: string;
@@ -2623,12 +2717,12 @@ export interface components {
             /** @example conversion_quote */
             object: string;
             /**
-             * @description VES per 1 USDT you get: market rate plus your spread.
+             * @description Units of `sourceCurrency` per 1 USDT you get: market rate plus your spread.
              * @example 998.8299
              */
             rate: string;
             /**
-             * @description Market USDT/VES rate the quote is based on.
+             * @description Market USDT rate (in `sourceCurrency`) the quote is based on.
              * @example 979.2450
              */
             marketRate: string;
@@ -2642,8 +2736,18 @@ export interface components {
              * @enum {string}
              */
             rateSource: "market";
-            /** @example 10000.00 */
-            sourceAmountVes: string;
+            /** @enum {string} */
+            sourceCurrency: "VES" | "COP";
+            /**
+             * @description Amount debited (VES to the cent, COP in whole pesos; rounded up).
+             * @example 10000.00
+             */
+            sourceAmount: string;
+            /**
+             * @description VES quotes only; `null` for COP.
+             * @example 10000.00
+             */
+            sourceAmountVes: string | null;
             /**
              * @description Rounded down to the cent.
              * @example 10.01
@@ -2680,10 +2784,27 @@ export interface components {
              * @enum {string}
              */
             rateSource: "market";
-            /** @example 10000.00 */
-            sourceAmountVes: string;
+            /** @enum {string} */
+            sourceCurrency: "VES" | "COP";
+            /**
+             * @description Amount debited (VES to the cent, COP in whole pesos).
+             * @example 10000.00
+             */
+            sourceAmount: string;
+            /**
+             * @description VES conversions only; `null` for COP.
+             * @example 10000.00
+             */
+            sourceAmountVes: string | null;
             /** @example 10.01 */
             targetAmountUsdt: string;
+            /**
+             * @description `auto` when created by auto-convert from a pay-in.
+             * @enum {string}
+             */
+            origin: "api" | "auto";
+            /** @description The pay-in an auto-conversion came from; `null` otherwise. */
+            paymentId: string | null;
             createdAt: string;
             completedAt: string | null;
             canceledAt: string | null;
@@ -6488,6 +6609,129 @@ export interface operations {
             };
         };
     };
+    ConversionSettings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionSettingsDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    ConversionSettings_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConversionSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversionSettingsDto"];
+                };
+            };
+            /** @description `invalid_data` — unknown field or percent outside 0–100. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `conversions_not_enabled` — COP conversions are not allowed for this account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     Conversions_createQuote: {
         parameters: {
             query?: never;
@@ -6583,6 +6827,7 @@ export interface operations {
                 status?: "PENDING" | "COMPLETED" | "CANCELED";
                 cursor?: string;
                 limit?: string;
+                sourceCurrency?: "VES" | "COP";
             };
             header?: never;
             path?: never;
@@ -7193,7 +7438,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentReceiptDto"];
                 };
             };
-            /** @description Invalid request or unsupported operation. */
+            /** @description Invalid body, or a VPOS test card sent with a Live key (test_card_in_live_mode). */
             400: {
                 headers: {
                     [name: string]: unknown;

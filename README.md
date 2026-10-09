@@ -146,9 +146,9 @@ await vexpay.crypto.payouts.create({
 
 Responses and events include `currency`, `amount` and `fee` for both coins (`amountUsdt` / `feeUsdt` stay on USDT only). Credit your customer in the `currency` the webhook reports.
 
-## Convert VES to USDT
+## Convert VES or COP to USDT
 
-Turn available VES into your USDT balance. A quote locks the rate (market USDT/VES rate plus your spread) for 60 seconds; accepting it debits the VES at once and returns a `PENDING` conversion. VEXPay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES returned). Conversions are on for every account that has USDT enabled — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately.
+Turn available VES or Colombian pesos into your USDT balance. A quote locks the rate (market USDT rate in that currency plus your spread) for 60 seconds; accepting it debits the source at once (`conversion.created`) and returns a `PENDING` conversion. VEXPay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES or COP returned). Conversions are on for every account that has USDT enabled (COP also needs COP enabled) — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately. COP amounts are whole pesos.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -164,9 +164,15 @@ const conversion = await vexpay.conversions.create(
 );
 
 for await (const c of vexpay.conversions.list({ status: 'PENDING' })) {
-  console.log(c.id, c.sourceAmountVes, '→', c.targetAmountUsdt);
+  console.log(c.id, c.sourceAmount, c.sourceCurrency, '→', c.targetAmountUsdt);
 }
 await vexpay.conversions.cancel(conversion.id); // only while PENDING
+
+// Colombian pesos: same flow with sourceCurrency 'COP'.
+const copQuote = await vexpay.conversions.quotes.create({ sourceCurrency: 'COP', sourceAmount: '1000000' });
+
+// Auto-convert 50% of each completed COP payment (after the fee) to USDT; 0 turns it off.
+await vexpay.conversions.settings.update({ autoConvert: { COP: { percent: 50 } } });
 ```
 
 ## Colombian pesos (COP)
@@ -212,6 +218,10 @@ const { availableCop } = await vexpay.cop.balance.retrieve();
 | Bre-B | No buyer data | QR and key from the sandbox. **Never send real money to them** — sandbox keys are reachable from real banks and the money is not credited. |
 | Nequi | Any valid data, e.g. phone `3001234567`, `CC` `1234567890`, any email | Completes on its own within about a minute |
 | Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp` |
+
+## Testing card payments
+
+With a test API key, VPOS test cards return a fixed outcome without reaching the bank: `4242424242424242` succeeds, `4000000000009995` is declined with `G51` (insufficient funds), `4000000000000259` completes and is then charged back, and more. A decline fails exactly like a live one (422, the bank code in `code` and `failureCode`, a `payment.failed` webhook). With a live key these numbers are refused with 400 `test_card_in_live_mode`. Full list: [test cards](https://docs.pay.vexwallet.co/vpos#test-card).
 
 ## Webhooks
 
@@ -400,6 +410,7 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `crypto.payouts` | `create`, `retrieve` |
 | `conversions` | `create`, `list`, `retrieve`, `cancel` |
 | `conversions.quotes` | `create` |
+| `conversions.settings` | `retrieve`, `update` |
 | `cop.payments` | `create`, `retrieve`, `submitOtp`, `cancel`, `refund` |
 | `cop.balance` | `retrieve` |
 | `merchants` | `create`, `list`, `retrieve`, `retrieveByRef`, `update`, `delete`, `retrieveBalance`, `transfer`, `listAuditEvents`, `startVerification`, `confirmVerification` |

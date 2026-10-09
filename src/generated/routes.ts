@@ -13,6 +13,8 @@ export const ROUTES = {
   Conversions_createQuote: { method: 'POST', path: '/v1/conversions/quotes' },
   Conversions_get: { method: 'GET', path: '/v1/conversions/{id}' },
   Conversions_list: { method: 'GET', path: '/v1/conversions' },
+  ConversionSettings_get: { method: 'GET', path: '/v1/conversions/settings' },
+  ConversionSettings_update: { method: 'PATCH', path: '/v1/conversions/settings' },
   CopPayments_balance: { method: 'GET', path: '/v1/cop/balance' },
   CopPayments_cancel: { method: 'POST', path: '/v1/cop/payments/{id}/cancel' },
   CopPayments_create: { method: 'POST', path: '/v1/cop/payments' },
