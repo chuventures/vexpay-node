@@ -805,8 +805,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Quote a USD amount in VES at the current BCV rate
-         * @description Returns the authoritative VEX FX BCV rate (bcvRate/vesAmount) used for payment settlement, plus medianRate/medianVesAmount from available BCV sources (VEX FX and partner-bank rates when available).
+         * Quote a USD amount in VES at your account's Bolívar rate
+         * @description Returns `rate`/`rateSource` (your account's Bolívar rate: the official BCV rate, or the market rate if you chose it) and `vesAmount` = usdAmount × rate, which is what a payment created now would charge. `bcvRate` is always the official VEX FX BCV rate; medianRate/medianVesAmount come from available BCV sources (VEX FX and bank rates when available). A MARKET account gets 503 rate_unavailable when no fresh market rate exists.
          */
         get: operations["Payments_getQuote"];
         put?: never;
@@ -868,7 +868,7 @@ export interface paths {
         put?: never;
         /**
          * Execute a VPOS card charge
-         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at BCV) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: if the same cardHolderId (debtorId) has had 3 distinct cards FAILED on VPOS within 30 minutes, further attempts are blocked (429, code CARD_VELOCITY_BLOCKED) without contacting the bank until the window rolls off. Test cards: with a Test key, the VPOS test cards listed at /vpos#test-card return fixed outcomes (approvals, bank declines with their G-codes, a chargeback) without contacting the bank; with a Live key they are refused with 400 test_card_in_live_mode.
+         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at your Bolívar rate: BCV, or market if you chose it) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: attempts our risk checks decline are refused without contacting the bank (429, code CARD_VELOCITY_BLOCKED, generic message). Retry later or use another payment method. Test cards: with a Test key, the VPOS test cards listed at /vpos#test-card return fixed outcomes (approvals, bank declines with their G-codes, a chargeback) without contacting the bank; with a Live key they are refused with 400 test_card_in_live_mode.
          */
         post: operations["Payments_executeVpos"];
         delete?: never;
@@ -1393,7 +1393,7 @@ export interface paths {
         put?: never;
         /**
          * Send a test event to subscribed webhook endpoints
-         * @description Fires a `notification.test` event to every active webhook endpoint subscribed to that event (or all events, depending on your subscription list). Use this to validate URL reachability and HMAC signature verification before going live. Returns 202 Accepted with `{ sent, event, tenantId }`.
+         * @description Fires a `notification.test` event to every active webhook endpoint subscribed to that event (or all events, depending on your subscription list). Use this to validate URL reachability and HMAC signature verification before going live. Returns 202 Accepted with `{ sent, event, tenantId }`. Limited to 10 calls per tenant per 10 minutes (429 beyond that).
          */
         post: operations["Notifications_sendTest"];
         delete?: never;
@@ -1528,7 +1528,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1537,7 +1537,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -1558,7 +1558,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -2855,11 +2855,25 @@ export interface components {
             /** @example 25 */
             usdAmount: number;
             /**
-             * @description Authoritative VEX FX BCV rate used for payment settlement
+             * @description Official VEX FX BCV rate (Bs per $1).
              * @example 36.5
              */
             bcvRate: number;
-            /** @example 912.5 */
+            /**
+             * @description Rate your payments are priced at (Bs per $1): `bcvRate` for BCV accounts, the market rate for MARKET accounts.
+             * @example 36.5
+             */
+            rate?: number;
+            /**
+             * @description Your account's Bolívar rate setting.
+             * @example BCV
+             * @enum {string}
+             */
+            rateSource?: "BCV" | "MARKET";
+            /**
+             * @description usdAmount × rate, rounded to the cent: what a payment created now would charge.
+             * @example 912.5
+             */
             vesAmount: number;
             /**
              * @description Median of available BCV sources (VEX FX + bank)
@@ -2892,14 +2906,28 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        OnwardPayoutDto: {
+            /**
+             * @description USDT payout network (see GET /v1/crypto/networks).
+             * @example BEP20
+             */
+            network: string;
+            /**
+             * @description Destination wallet address. Only its format is checked: a wrong but valid address cannot be recovered.
+             * @example 0x2f5c…
+             */
+            address: string;
+            /** @description Destination tag / memo, for networks that need one (e.g. TON). */
+            tag?: string;
+        };
         C2pRequestDto: {
             /**
-             * @description USD amount. Required unless vesAmount is set. When only usdAmount is set, VES is derived at the live BCV rate.
+             * @description USD amount. Required unless vesAmount is set. When only usdAmount is set, VES is derived at your Bolívar rate (live BCV, or market if you chose it).
              * @example 25
              */
             usdAmount?: number;
             /**
-             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at BCV (it wins over usdAmount). The intent keeps this amount until it is executed.
+             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at your Bolívar rate (it wins over usdAmount). The intent keeps this amount until it is executed.
              * @example 50
              */
             vesAmount?: number;
@@ -2932,6 +2960,49 @@ export interface components {
              * @example 10
              */
             applicationFeePercent?: number;
+            /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
+            onwardPayout?: components["schemas"]["OnwardPayoutDto"];
+        };
+        OnwardPayoutStatusDto: {
+            /**
+             * @example completed
+             * @enum {string}
+             */
+            status: "pending" | "converting" | "sending" | "completed" | "held" | "failed" | "canceled";
+            /** @example BEP20 */
+            network: string;
+            /** @example 0x2f5c0000000000000000000000000000000000aa */
+            address: string;
+            tag?: string;
+            /**
+             * Format: uuid
+             * @description The VES → USDT conversion, once created.
+             */
+            conversionId?: string;
+            /**
+             * Format: uuid
+             * @description The USDT payout, once created.
+             */
+            payoutId?: string;
+            /**
+             * @description USDT sent to the address.
+             * @example 18.94
+             */
+            amountUsdt?: string;
+            /**
+             * @description Network payout fee.
+             * @example 0.75
+             */
+            feeUsdt?: string;
+            /** @description On-chain hash once the payout completed. */
+            txHash?: string;
+            /**
+             * @description Why it is held, failed or canceled.
+             * @example below_payout_minimum
+             */
+            reason?: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         C2pIntentResponseDto: {
             /**
@@ -2952,8 +3023,22 @@ export interface components {
             usdAmount: number;
             /** @example 912.5 */
             vesAmount: number;
-            /** @example 36.5 */
+            /**
+             * @description Official BCV rate (Bs per $1) when the payment was created. Reference only; see `rate`.
+             * @example 36.5
+             */
             bcvRate: number;
+            /**
+             * @description Rate (Bs per $1) this payment was priced at: equal to `bcvRate` for BCV tenants, the market rate for MARKET tenants.
+             * @example 36.5
+             */
+            rate?: number;
+            /**
+             * @description Source of `rate`: the account's Bolívar rate setting when the payment was created.
+             * @example BCV
+             * @enum {string}
+             */
+            rateSource?: "BCV" | "MARKET";
             /**
              * @description Platform service fee, USD. Clamped 0..usdAmount.
              * @example 0.88
@@ -3006,6 +3091,8 @@ export interface components {
             reversalRef?: string;
             /** @example 842950 */
             reversalTxId?: number;
+            /** @description Present when the pay-in was sent with `onwardPayout`. */
+            onwardPayout?: components["schemas"]["OnwardPayoutStatusDto"];
             /**
              * Format: uuid
              * @description Use this value as intentId when executing the C2P charge.
@@ -3021,12 +3108,12 @@ export interface components {
              */
             intentId?: string;
             /**
-             * @description USD amount. Required unless vesAmount or intentId is set. When only usdAmount is set, VES is derived at the live BCV rate.
+             * @description USD amount. Required unless vesAmount or intentId is set. When only usdAmount is set, VES is derived at your Bolívar rate (live BCV, or market if you chose it).
              * @example 25
              */
             usdAmount?: number;
             /**
-             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at BCV (it wins over usdAmount). With intentId the amount locked on the intent is charged; amounts sent here must match it (±0.01 Bs / ±$0.01).
+             * @description VES amount debited at the bank. When set, locks the bolívar charge and derives USD at your Bolívar rate (it wins over usdAmount). With intentId the amount locked on the intent is charged; amounts sent here must match it (±0.01 Bs / ±$0.01).
              * @example 50
              */
             vesAmount?: number;
@@ -3064,6 +3151,8 @@ export interface components {
              * @example 10
              */
             applicationFeePercent?: number;
+            /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
+            onwardPayout?: components["schemas"]["OnwardPayoutDto"];
         };
         PaymentReceiptDto: {
             /**
@@ -3084,8 +3173,22 @@ export interface components {
             usdAmount: number;
             /** @example 912.5 */
             vesAmount: number;
-            /** @example 36.5 */
+            /**
+             * @description Official BCV rate (Bs per $1) when the payment was created. Reference only; see `rate`.
+             * @example 36.5
+             */
             bcvRate: number;
+            /**
+             * @description Rate (Bs per $1) this payment was priced at: equal to `bcvRate` for BCV tenants, the market rate for MARKET tenants.
+             * @example 36.5
+             */
+            rate?: number;
+            /**
+             * @description Source of `rate`: the account's Bolívar rate setting when the payment was created.
+             * @example BCV
+             * @enum {string}
+             */
+            rateSource?: "BCV" | "MARKET";
             /**
              * @description Platform service fee, USD. Clamped 0..usdAmount.
              * @example 0.88
@@ -3138,15 +3241,17 @@ export interface components {
             reversalRef?: string;
             /** @example 842950 */
             reversalTxId?: number;
+            /** @description Present when the pay-in was sent with `onwardPayout`. */
+            onwardPayout?: components["schemas"]["OnwardPayoutStatusDto"];
         };
         VposPaymentDto: {
             /**
-             * @description USD amount. Required unless vesAmount is set. When only usdAmount is set, VES is derived at the live BCV rate.
+             * @description USD amount. Required unless vesAmount is set. When only usdAmount is set, VES is derived at your Bolívar rate (live BCV, or market if you chose it).
              * @example 25
              */
             usdAmount?: number;
             /**
-             * @description VES amount charged at the bank. When set, locks the bolívar charge and derives USD at BCV — use this to avoid USD↔VES 2-decimal round-trip drift (e.g. Bs. 50 → $0.07 → Bs. 52.86).
+             * @description VES amount charged at the bank. When set, locks the bolívar charge and derives USD at your Bolívar rate — use this to avoid USD↔VES 2-decimal round-trip drift (e.g. Bs. 50 → $0.07 → Bs. 52.86).
              * @example 50
              */
             vesAmount?: number;
@@ -3187,6 +3292,11 @@ export interface components {
              * @example order-1042
              */
             externalRef?: string;
+            /**
+             * @description Who the funds are for when that is not a merchant (e.g. the wallet user being topped up). Shown to ops only; does not affect settlement.
+             * @example @maria
+             */
+            beneficiary?: string;
             /** Format: uuid */
             merchantId?: string;
             /**
@@ -3284,6 +3394,8 @@ export interface components {
              * @example 04149333844
              */
             debtorCellPhone?: string;
+            /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
+            onwardPayout?: components["schemas"]["OnwardPayoutDto"];
         };
         PayoutMethodResponseDto: {
             /** Format: uuid */
@@ -7252,7 +7364,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description bcvRate/vesAmount are authoritative for settlement; medianRate/medianVesAmount are for display. sources includes per-source rates or errors. */
+            /** @description rate/vesAmount are authoritative for settlement; bcvRate is the official rate; medianRate/medianVesAmount are for display. sources includes per-source rates or errors. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -10174,6 +10286,15 @@ export interface operations {
             };
             /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description More than 10 test notifications in 10 minutes. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -26,6 +26,7 @@ export const WEBHOOK_EVENT_NAMES = [
   'conversion.created',
   'conversion.completed',
   'conversion.canceled',
+  'onward_payout.updated',
   'tenant.status_changed',
   'tenant.api_key.created',
   'tenant.api_key.rotated',
@@ -45,7 +46,12 @@ export interface PaymentWebhookData {
   method: 'C2P' | 'VPOS' | 'PAGO_MOVIL' | 'DEBITO_INMEDIATO' | 'COP';
   usdAmount: number;
   vesAmount: number;
+  /** Official BCV rate (Bs per $1) when the payment was created. */
   bcvRate: number;
+  /** Rate the payment was priced at: `bcvRate` for BCV accounts, the market rate for MARKET accounts. */
+  rate?: number;
+  /** Your account's Bolívar rate setting when the payment was created. */
+  rateSource?: 'BCV' | 'MARKET';
   feeUsd?: number;
   feeVes?: number;
   netVes?: number;
