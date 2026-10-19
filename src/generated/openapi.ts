@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Get platform balance breakdown
-         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes.
+         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes. Incoming credits are held for 24h (`heldVes`, `nextReleaseAt`) before payouts can spend them.
          */
         get: operations["Balance_getBalance"];
         put?: never;
@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * List balance movements
-         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes`, `availableVes`), so you can reconcile your own ledger automatically. Page with `cursor`.
+         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes` and `heldVes`, `availableVes`), so you can reconcile your own ledger automatically. Movements still under the 24h balance hold carry `availableAt`. Page with `cursor`.
          */
         get: operations["Balance_listTransactions"];
         put?: never;
@@ -1449,8 +1449,19 @@ export interface components {
             /** @example 8650.00 */
             ledgerNetVes: string;
             /**
-             * @description Tenant spendable float after reserve (seller obligations already deducted via SELLER_TRANSFER).
-             * @example 8650.00
+             * @description VES under the 24h balance hold: incoming credits count in `ledgerNetVes` but cannot be paid out until their hold ends. Conversions and seller transfers may still use them.
+             * @example 4500.00
+             */
+            heldVes?: string;
+            /**
+             * Format: date-time
+             * @description When the soonest held amount becomes available; null when nothing is held.
+             * @example 2026-10-20T00:48:52.784Z
+             */
+            nextReleaseAt?: string | null;
+            /**
+             * @description What payouts can spend: ledgerNetVes − reserveVes − heldVes (seller obligations already deducted via SELLER_TRANSFER).
+             * @example 4150.00
              */
             availableVes: string;
             /** @example 8650.00 */
@@ -1468,6 +1479,11 @@ export interface components {
             feePercent: string;
             /** @example 0.00 */
             feeFixedUsd: string;
+            /**
+             * @description Hours each incoming credit is held before payouts can spend it (0 = no hold). Set by VEXPay.
+             * @example 24
+             */
+            balanceHoldHours?: number;
         };
         BalanceTransactionDto: {
             /**
@@ -1479,7 +1495,7 @@ export interface components {
              * @example chargeback
              * @enum {string}
              */
-            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal";
+            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee";
             /**
              * @description Signed VES amount (negative = money out of your balance).
              * @example -4000.00
@@ -1503,6 +1519,11 @@ export interface components {
             externalRef?: string;
             /** @example Card chargeback (fraud) */
             description: string;
+            /**
+             * Format: date-time
+             * @description Part of the 24h balance hold: this movement counts in `heldVes` (not `availableVes`) until this time.
+             */
+            availableAt?: string;
             /** Format: date-time */
             createdAt: string;
         };
@@ -2327,10 +2348,20 @@ export interface components {
              */
             currency: "USDT" | "USDC";
             /**
-             * @description Available for payouts, in `currency` (ledger).
+             * @description Available for payouts, in `currency` (ledger). Excludes `held`.
              * @example 97.00
              */
             available: string;
+            /**
+             * @description Under the 24h balance hold: credited but not payable until its hold ends, in `currency`.
+             * @example 0.00
+             */
+            held?: string;
+            /**
+             * Format: date-time
+             * @description When the soonest held amount becomes available; null when nothing is held.
+             */
+            nextReleaseAt?: string | null;
             /**
              * @description Reserved by payouts that have not completed yet, in `currency`.
              * @example 50.10
@@ -2346,6 +2377,11 @@ export interface components {
              * @example 50.10
              */
             pendingPayoutUsdt?: string;
+            /**
+             * @description USDT only: same as `held`.
+             * @example 0.00
+             */
+            heldUsdt?: string;
             /** Format: date-time */
             asOf: string;
         };
@@ -2542,7 +2578,7 @@ export interface components {
         };
         CreateCopPaymentDto: {
             /**
-             * @description Amount in whole Colombian pesos.
+             * @description Amount in whole Colombian pesos. At least 2,000 (`amount_below_minimum` otherwise).
              * @example 100000
              */
             amountCop: number;
@@ -2638,10 +2674,20 @@ export interface components {
         };
         CopBalanceDto: {
             /**
-             * @description Whole pesos available for payout.
+             * @description Whole pesos available for payout. Excludes `heldCop`.
              * @example 96500
              */
             availableCop: number;
+            /**
+             * @description Whole pesos under the 24h balance hold: credited but not payable until the hold ends.
+             * @example 0
+             */
+            heldCop?: number;
+            /**
+             * Format: date-time
+             * @description When the soonest held amount becomes available; null when nothing is held.
+             */
+            nextReleaseAt?: string | null;
             /**
              * @description Whole pesos reserved by payouts in progress.
              * @example 0
@@ -2965,10 +3011,11 @@ export interface components {
         };
         OnwardPayoutStatusDto: {
             /**
+             * @description `waiting_release`: converted, waiting for the 24h balance hold to end before sending (see `sendAfter`).
              * @example completed
              * @enum {string}
              */
-            status: "pending" | "converting" | "sending" | "completed" | "held" | "failed" | "canceled";
+            status: "pending" | "converting" | "waiting_release" | "sending" | "completed" | "held" | "failed" | "canceled";
             /** @example BEP20 */
             network: string;
             /** @example 0x2f5c0000000000000000000000000000000000aa */
@@ -3001,6 +3048,11 @@ export interface components {
              * @example below_payout_minimum
              */
             reason?: string;
+            /**
+             * Format: date-time
+             * @description `waiting_release` only: when the converted USDT leaves the balance hold and the payout is sent.
+             */
+            sendAfter?: string;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -3525,6 +3577,33 @@ export interface components {
             /** Format: uuid */
             payoutMethodId: string;
         };
+        MerchantCopBalanceDto: {
+            /**
+             * @description COP sales still in the seller hold.
+             * @example 16002
+             */
+            pendingCop: string;
+            /**
+             * @description COP the seller can pay out.
+             * @example 30000
+             */
+            availableCop: string;
+            /**
+             * @description COP payouts requested and not yet paid.
+             * @example 0
+             */
+            payoutPendingCop: string;
+            /**
+             * @description COP paid out to the seller so far.
+             * @example 0
+             */
+            paidOutCop: string;
+            /**
+             * @description VEX Wallet sellers: COP per US$1 a wallet sweep would use now (display only). Omitted when no fresh rate.
+             * @example 3939.0000
+             */
+            sweepRate?: string;
+        };
         MerchantBalanceDto: {
             /** Format: uuid */
             merchantId: string;
@@ -3540,6 +3619,8 @@ export interface components {
             paidOutVes: string;
             /** @example 350.00 */
             ledgerNetVes: string;
+            /** @description COP balances from COP sales on seller links. Present only once the seller has COP activity. */
+            cop?: components["schemas"]["MerchantCopBalanceDto"];
         };
         CreateMerchantDto: {
             /** @example usr_7f3a… */
@@ -3876,7 +3957,7 @@ export interface operations {
                 /** @description Only movements of this payment. */
                 paymentId?: string;
                 /** @description One or more types (repeat or comma-separate). */
-                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal")[];
+                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee")[];
                 /** @description `nextCursor` from the previous page. */
                 cursor?: string;
                 /** @description 1–100, default 50. */

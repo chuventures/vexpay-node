@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.10.0
+
+### Minor Changes
+
+- Balances are held 24h before payouts can spend them (tenant balance hold). Balance reads add `heldVes`/`held`/`heldCop` and `nextReleaseAt`; `GET /v1/balance` adds `balanceHoldHours`; balance movements carry `availableAt` while held. Payout `insufficient_balance` errors include the held amount and `nextReleaseAt`. Onward payouts add the `waiting_release` status with `sendAfter` (converted, waiting for the hold to end before sending). All new fields are optional.
+
 ## 0.9.0
 
 ### Minor Changes
