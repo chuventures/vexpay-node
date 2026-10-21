@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.11.0
+
+### Minor Changes
+
+- Checkout sessions can split the payment with one of your merchants: `merchantId` (UUID or `mrc_` id) and optional `applicationFeePercent` (0–100) on create, echoed on create and retrieve. Sessions with a merchant offer bolívar methods only (`c2p`, `pago_movil`, `vpos`); when the payment completes your commission stays with you and the seller's net goes to the merchant's balance. Sessions may also be refused with `invalid_data` for a method you turned off in Portal → Payment methods.
+
 ## 0.10.0
 
 ### Minor Changes

@@ -312,7 +312,7 @@ try {
 | `VexPayAuthenticationError` | 401 — missing or invalid API key |
 | `VexPayInvalidRequestError` | 400, 403, 410, 422 — fix the request |
 | `VexPayNotFoundError` | 404 |
-| `VexPayConflictError` | 409 — e.g. `external_ref_conflict`, `idempotency_key_reused` |
+| `VexPayConflictError` | 409 — e.g. `external_ref_conflict`, `external_ref_already_paid` (body `paymentId`), `idempotency_key_reused` |
 | `VexPayRateLimitError` | 429, after retries |
 | `VexPayAPIError` | 5xx, after retries |
 | `VexPayConnectionError` / `VexPayTimeoutError` | no HTTP answer, after retries |

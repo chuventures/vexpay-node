@@ -105,6 +105,8 @@ export interface paths {
         /**
          * Create a simple merchant payout
          * @description Credits a verified merchant Pago Móvil method with an exact VES `monto`. `externalRef` is the idempotency key (same payload → 200 replay; conflicting payload → 409 `external_ref_conflict`). Requires an active merchant and a verified payout method.
+         *
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
          */
         post: operations["Payouts_create"];
         delete?: never;
@@ -125,6 +127,8 @@ export interface paths {
         /**
          * Instant crédito to the verified tenant payout account
          * @description Credits the tenant’s verified Pago Móvil account (see GET /v1/tenant/payout-account). Requires a verified account that is eligible (first verify is immediate; destination changes require a completed 1 business-day cooling period). `monto` is the gross VES withdrawn from available balance; the bank receives monto minus feePercent.
+         *
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
          */
         post: operations["Payouts_createInstant"];
         delete?: never;
@@ -145,6 +149,8 @@ export interface paths {
         /**
          * Create a split payout batch (per-item results)
          * @description Creates or replays a batch keyed by batch-level `externalRef`. Each item is processed independently; failures are returned inline with status `failed` and do not abort siblings. Item-level `externalRef` values remain individually idempotent.
+         *
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
          */
         post: operations["Payouts_createBatch"];
         delete?: never;
@@ -292,7 +298,7 @@ export interface paths {
         put?: never;
         /**
          * Execute an immediate debit
-         * @description Charges the payer after they provide the bank OTP. `ACCP` = accepted (payment.completed webhook). `AC00` = pending — the gateway polls ConsultarOperaciones until ACCP or a reject code, then fires payment.completed or payment.failed. Optional `externalRef` is stored for recovery via GET /v1/payments/by-ref/:externalRef (correlation only — not idempotent). Response always includes `paymentId` for the DEBITO_INMEDIATO payment record. Test-mode tenants simulate débito; sandbox codes and test cards are in Portal → Sandbox.
+         * @description Charges the payer after they provide the bank OTP. `ACCP` = accepted (payment.completed webhook). `AC00` = pending — the gateway polls ConsultarOperaciones until ACCP or a reject code, then fires payment.completed or payment.failed. Optional `externalRef` is stored for recovery via GET /v1/payments/by-ref/:externalRef (correlation, not an idempotency key). A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine. Response always includes `paymentId` for the DEBITO_INMEDIATO payment record. Test-mode tenants simulate débito; sandbox codes and test cards are in Portal → Sandbox.
          */
         post: operations["R4Operations_debitoInmediato"];
         delete?: never;
@@ -828,7 +834,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pending C2P payment intent and request bank OTP when supported
-         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. When the routed bank supports it, VEXPay also asks the payer bank to SMS a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p.
+         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. When the routed bank supports it, VEXPay also asks the payer bank to SMS a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p. A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine.
          */
         post: operations["Payments_requestC2p"];
         delete?: never;
@@ -848,7 +854,7 @@ export interface paths {
         put?: never;
         /**
          * Execute a C2P charge
-         * @description Charges the customer with the bank-issued token. Prefer including `intentId` from POST /v1/payments/c2p/request. Returns a PaymentReceiptDto; subscribe to payment.completed / payment.failed for async confirmation when applicable. `externalRef` is correlation only — not idempotent.
+         * @description Charges the customer with the bank-issued token. Prefer including `intentId` from POST /v1/payments/c2p/request. Returns a PaymentReceiptDto; subscribe to payment.completed / payment.failed for async confirmation when applicable. `externalRef` is correlation (not an idempotency key — use Idempotency-Key for retries). A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine. On an intent, only another COMPLETED payment with its externalRef blocks it.
          */
         post: operations["Payments_executeC2p"];
         delete?: never;
@@ -868,7 +874,7 @@ export interface paths {
         put?: never;
         /**
          * Execute a VPOS card charge
-         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at your Bolívar rate: BCV, or market if you chose it) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: attempts our risk checks decline are refused without contacting the bank (429, code CARD_VELOCITY_BLOCKED, generic message). Retry later or use another payment method. Test cards: with a Test key, the VPOS test cards listed at /vpos#test-card return fixed outcomes (approvals, bank declines with their G-codes, a chargeback) without contacting the bank; with a Live key they are refused with 400 test_card_in_live_mode.
+         * @description BNC only. Submit PAN/CVV only from a PCI-compliant server environment. Pass usdAmount (VES derived at your Bolívar rate: BCV, or market if you chose it) or vesAmount (locks the bolívar charge; USD derived). Returns PaymentReceiptDto with optional cardLast4 / cardBrand. Never log full card data. Carding defense: attempts our risk checks decline are refused without contacting the bank (429, code CARD_VELOCITY_BLOCKED, generic message). Retry later or use another payment method. Test cards: with a Test key, the VPOS test cards listed at /vpos#test-card return fixed outcomes (approvals, bank declines with their G-codes, a chargeback) without contacting the bank; with a Live key they are refused with 400 test_card_in_live_mode. A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine.
          */
         post: operations["Payments_executeVpos"];
         delete?: never;
@@ -1594,10 +1600,15 @@ export interface components {
              */
             payoutId: string;
             /**
-             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id.
+             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit`, funds returned) when rejected.
              * @enum {string}
              */
-            status: "completed" | "pending" | "failed";
+            status: "completed" | "pending" | "failed" | "awaiting_approval";
+            /**
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent).
+             * @enum {string}
+             */
+            holdReason?: "NEW_ACCOUNT_LIMIT";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -1661,10 +1672,15 @@ export interface components {
              */
             payoutId: string;
             /**
-             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id.
+             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit`, funds returned) when rejected.
              * @enum {string}
              */
-            status: "completed" | "pending" | "failed";
+            status: "completed" | "pending" | "failed" | "awaiting_approval";
+            /**
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent).
+             * @enum {string}
+             */
+            holdReason?: "NEW_ACCOUNT_LIMIT";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -2147,7 +2163,7 @@ export interface components {
              */
             concepto: string;
             /**
-             * @description Tenant correlation value for recovery lookup (GET /v1/payments/by-ref/:externalRef). Not an idempotency key.
+             * @description Tenant correlation value for recovery lookup (GET /v1/payments/by-ref/:externalRef). Not an idempotency key; a ref that already has a COMPLETED payment is refused (409 external_ref_already_paid).
              * @example fine_736a0b42-0b6e-454c-b87e-7f3c0e47057b
              */
             externalRef?: string;
@@ -2990,7 +3006,7 @@ export interface components {
              */
             debtorBankCode: number;
             /**
-             * @description Correlation value; not an idempotency key. When present, any other PENDING C2P intent for this tenant + externalRef is canceled (superseded) before the new intent is created.
+             * @description Correlation value; not an idempotency key. A ref that already has a COMPLETED payment is refused (409 external_ref_already_paid). When present, any other PENDING C2P intent for this tenant + externalRef is canceled (superseded) before the new intent is created.
              * @example order-1042
              */
             externalRef?: string;
@@ -3184,7 +3200,7 @@ export interface components {
              */
             token: string;
             /**
-             * @description Correlation value; not an idempotency key.
+             * @description Correlation value; not an idempotency key. A ref that already has a COMPLETED payment is refused (409 external_ref_already_paid).
              * @example order-1042
              */
             externalRef?: string;
@@ -3340,7 +3356,7 @@ export interface components {
              */
             cardType: 1 | 2 | 3;
             /**
-             * @description Correlation value; not an idempotency key.
+             * @description Correlation value; not an idempotency key. A ref that already has a COMPLETED payment is refused (409 external_ref_already_paid).
              * @example order-1042
              */
             externalRef?: string;
@@ -3748,6 +3764,16 @@ export interface components {
             metadata?: {
                 [key: string]: string;
             };
+            /**
+             * @description Split the payment with one of your merchants (UUID or `mrc_` id). The merchant's share is credited to its VES balance when the payment completes. Only bolívar methods (`c2p`, `pago_movil`, `vpos`) are offered.
+             * @example 3fd84b2d-9ad1-4f74-a2d9-0f2f56984db5
+             */
+            merchantId?: string;
+            /**
+             * @description Commission percent you keep when `merchantId` is set. Omit to use the merchant's commission, then your default commission.
+             * @example 3
+             */
+            applicationFeePercent?: number;
         };
         CheckoutSessionResponseDto: {
             /** @example cs_4f0c6f1e2b7d4c1a9e3f5a6b7c8d9e0f */
@@ -3783,6 +3809,13 @@ export interface components {
             expiresAt: string;
             /** Format: date-time */
             createdAt: string;
+            /** @description Merchant the payment is split with. */
+            merchantId?: string | null;
+            /**
+             * @description Commission percent set on the session; null = merchant or tenant default at payment time.
+             * @example 3
+             */
+            applicationFeePercent?: string | null;
             /** @description false for test-mode tenants. */
             livemode: boolean;
         };
@@ -4286,8 +4319,8 @@ export interface operations {
     Payouts_list: {
         parameters: {
             query?: {
-                /** @description Optional status filter. */
-                status?: "pending" | "completed" | "failed";
+                /** @description Optional status filter. `awaiting_approval` lists payouts held for VEX Pay review. */
+                status?: "pending" | "awaiting_approval" | "completed" | "failed";
                 /** @description Opaque cursor from a previous `nextCursor`. */
                 cursor?: string;
                 /** @description Page size 1–100 (default 25). */
@@ -5295,6 +5328,15 @@ export interface operations {
             };
             /** @description This method (débito or crédito) is not enabled on this account, or live mode is not activated (`live_mode_not_activated`). */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description externalRef already has a COMPLETED payment (external_ref_already_paid; body includes paymentId). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7552,6 +7594,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description externalRef already has a COMPLETED payment (external_ref_already_paid; body includes paymentId). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -7633,6 +7684,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description externalRef already has a COMPLETED payment (external_ref_already_paid; body includes paymentId). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description The provider rejected the charge. */
             422: {
                 headers: {
@@ -7706,6 +7766,15 @@ export interface operations {
             };
             /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description externalRef already has a COMPLETED payment (external_ref_already_paid; body includes paymentId). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
