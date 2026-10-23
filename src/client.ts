@@ -8,6 +8,14 @@ import {
   TenantPayoutAccount,
   WebhookEndpoints,
 } from './resources/account';
+import {
+  Customers,
+  Invoices,
+  PaymentMethods,
+  Prices,
+  SetupSessions,
+  Subscriptions,
+} from './resources/billing';
 import { Checkout, PaymentLinks, Products } from './resources/commerce';
 import { Conversions } from './resources/conversions';
 import { Cop } from './resources/cop';
@@ -50,6 +58,17 @@ export class VexPay {
   readonly paymentLinks: PaymentLinks;
   readonly tenantPayoutAccount: TenantPayoutAccount;
   readonly webhookEndpoints: WebhookEndpoints;
+  /** Billing: who you bill. */
+  readonly customers: Customers;
+  /** Billing: recurring prices on products. */
+  readonly prices: Prices;
+  /** Billing: bill a customer on a price every interval. */
+  readonly subscriptions: Subscriptions;
+  readonly invoices: Invoices;
+  /** Billing: hosted links where a customer authorizes domiciliación. */
+  readonly setupSessions: SetupSessions;
+  /** Billing: domiciliación payment methods (bolívar methods your account takes: `payments.methods()`). */
+  readonly paymentMethods: PaymentMethods;
   /** Offline helpers: `constructEvent` verifies deliveries; no API calls. */
   readonly webhooks = new Webhooks();
 
@@ -86,5 +105,11 @@ export class VexPay {
     this.paymentLinks = new PaymentLinks(this.http);
     this.tenantPayoutAccount = new TenantPayoutAccount(this.http);
     this.webhookEndpoints = new WebhookEndpoints(this.http);
+    this.customers = new Customers(this.http);
+    this.prices = new Prices(this.http);
+    this.subscriptions = new Subscriptions(this.http);
+    this.invoices = new Invoices(this.http);
+    this.setupSessions = new SetupSessions(this.http);
+    this.paymentMethods = new PaymentMethods(this.http);
   }
 }

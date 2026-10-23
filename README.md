@@ -219,6 +219,43 @@ const { availableCop } = await vexpay.cop.balance.retrieve();
 | Nequi | Any valid data, e.g. phone `3001234567`, `CC` `1234567890`, any email | Completes on its own within about a minute |
 | Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp` |
 
+## Subscriptions
+
+Bill a customer on a recurring USD price. Each period VEXPay issues an invoice; with `send_invoice` (default) the customer pays it on a hosted page (`hostedInvoiceUrl`), with `charge_automatically` VEXPay charges their domiciliación. Listen for `invoice.paid`, `invoice.payment_failed` and `customer.subscription.*` webhooks.
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+const customer = await vexpay.customers.create({ name: 'María Pérez', email: 'maria@example.com' });
+const price = await vexpay.prices.create({
+  product: 'prod_123',
+  unitAmountUsd: 10,
+  recurring: { interval: 'month' },
+});
+
+const subscription = await vexpay.subscriptions.create(
+  { customer: customer.id, price: price.id, methods: ['c2p', 'pago_movil'] },
+  { idempotencyKey: `sub-${customer.id}` },
+);
+
+for await (const invoice of vexpay.invoices.list({ subscription: subscription.id })) {
+  console.log(invoice.number, invoice.status, invoice.amountDueUsd, invoice.hostedInvoiceUrl);
+}
+
+// Domiciliación: send the customer a setup link, then charge automatically.
+const setup = await vexpay.setupSessions.create({ customer: customer.id });
+console.log(setup.url);
+for await (const method of vexpay.customers.paymentMethods.list(customer.id)) {
+  console.log(method.id, method.status);
+}
+
+await vexpay.subscriptions.update(subscription.id, { cancelAtPeriodEnd: true });
+```
+
+`subscriptions.cancel(id)` cancels at once and voids its open invoices. On an open invoice, `invoices.void(id)`, `invoices.markUncollectible(id)` (stays payable) and `invoices.pay(id, { paidOutOfBand: true })` (paid outside VEXPay; no money moves). `paymentMethods.detach(id)` stops a domiciliación from being charged again.
+
 ## Testing card payments
 
 With a test API key, VPOS test cards return a fixed outcome without reaching the bank: `4242424242424242` succeeds, `4000000000009995` is declined with `G51` (insufficient funds), `4000000000000259` completes and is then charged back, and more. A decline fails exactly like a live one (422, the bank code in `code` and `failureCode`, a `payment.failed` webhook). With a live key these numbers are refused with 400 `test_card_in_live_mode`. Full list: [test cards](https://docs.pay.vexwallet.co/vpos#test-card).
@@ -342,7 +379,7 @@ await vexpay.payments.c2p.execute(
 
 ## Pagination
 
-`list()` methods on payouts, merchants, and products return the first page when awaited, and every item when iterated:
+`list()` methods on payouts, merchants, products, customers, prices, subscriptions and invoices return the first page when awaited, and every item when iterated:
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -420,6 +457,13 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `paymentLinks` | `retrieve`, `update`, `delete` |
 | `tenantPayoutAccount` | `retrieve`, `upsert`, `create`, `startVerification`, `confirmVerification` |
 | `webhookEndpoints` | `create`, `list`, `update`, `delete`, `sendTest` |
+| `customers` | `create`, `list`, `retrieve`, `update`, `delete` |
+| `customers.paymentMethods` | `list` |
+| `prices` | `create`, `list`, `retrieve`, `update` |
+| `subscriptions` | `create`, `list`, `retrieve`, `update`, `cancel` |
+| `invoices` | `list`, `retrieve`, `void`, `markUncollectible`, `pay` |
+| `setupSessions` | `create`, `retrieve` |
+| `paymentMethods` | `retrieve`, `detach` |
 | `webhooks` | `constructEvent`, `generateTestHeader` (offline) |
 
 Full API reference: [docs](https://pay.vexwallet.co/docs) · OpenAPI: `/openapi.json`.

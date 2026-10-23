@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.12.0
+
+### Minor Changes
+
+- Billing: `customers` (`create`, `list`, `retrieve`, `update`, `delete`, `paymentMethods.list`), `prices` (`create`, `list`, `retrieve`, `update`), `subscriptions` (`create`, `list`, `retrieve`, `update`, `cancel`), `invoices` (`list`, `retrieve`, `void`, `markUncollectible`, `pay`), `setupSessions` (`create`, `retrieve`) and `paymentMethods` (`retrieve`, `detach`). Lists auto-paginate. Subscriptions bill a customer on a recurring USD price by hosted invoice (`send_invoice`) or domiciliación (`charge_automatically`).
+
 ## 0.11.0
 
 ### Minor Changes
