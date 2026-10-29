@@ -106,15 +106,19 @@ export interface CopPaymentWebhookData {
   method: 'COP';
   currency: 'COP';
   status: 'pending' | 'completed' | 'failed' | 'canceled' | 'refunded';
-  channel: 'breb' | 'nequi' | 'daviplata';
+  channel: 'breb' | 'nequi' | 'daviplata' | 'card' | 'pse' | 'bancolombia_transfer' | 'bancolombia_qr';
   amountCop: number;
+  /** Card payments: brand and last 4 digits. */
+  card?: { brand: string; last4: string };
   feeCop?: number;
   amountUsd?: string;
   copRate?: string;
   reference?: string;
   externalRef?: string;
   metadata: Record<string, string>;
-  failureCode?: 'expired' | 'rejected' | 'processor_error' | 'processor_unknown';
+  failureCode?: 'expired' | 'rejected' | 'processor_error' | 'processor_unknown' | 'chargeback';
+  /** `payment.reversed` from a card dispute: `"chargeback"` (the amount was debited from your COP balance). */
+  reason?: 'chargeback';
   expiresAt?: string;
   createdAt: string;
   completedAt?: string;

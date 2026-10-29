@@ -13,6 +13,19 @@ describe('cop', () => {
 
   beforeAll(async () => {
     server = await mockServer((req) => {
+      if (req.url === '/v1/cop/channels') {
+        return {
+          status: 200,
+          body: {
+            channels: [{ channel: 'pse', label: 'PSE', needsBuyer: true, needsTermsAcceptance: true, checkoutOnly: false, minAmountCop: 20000 }],
+            pseBanks: [{ code: '1007', name: 'Bancolombia' }],
+            terms: { termsUrl: 'https://t', personalDataUrl: 'https://d' },
+          },
+        };
+      }
+      if (req.method === 'POST' && (req.body as { channel?: string } | undefined)?.channel === 'pse') {
+        return { status: 201, body: { ...PAYMENT, channel: 'pse', next: { type: 'redirect', url: 'https://bank.example/pse' } } };
+      }
       if (req.url === '/v1/cop/balance') return { status: 200, body: { availableCop: 96500, pendingPayoutCop: 0, asOf: '2026-10-08T00:00:00.000Z' } };
       if (req.url.endsWith('/otp')) return { status: 200, body: { ...PAYMENT, status: 'completed', feeCop: 1750 } };
       if (req.url.endsWith('/cancel')) return { status: 200, body: { ...PAYMENT, status: 'canceled' } };
@@ -50,6 +63,25 @@ describe('cop', () => {
     expect((await vexpay.cop.payments.cancel(PAYMENT.id)).status).toBe('canceled');
     expect((await vexpay.cop.payments.refund(PAYMENT.id)).status).toBe('refunded');
     expect(server.requests.at(-1)!.url).toBe(`/v1/cop/payments/${PAYMENT.id}/refund`);
+  });
+
+  it('lists channels, then creates a PSE payment that redirects to the bank', async () => {
+    const catalog = await vexpay.cop.channels();
+    expect(server.requests.at(-1)!.url).toBe('/v1/cop/channels');
+    expect(catalog.channels[0]).toMatchObject({ channel: 'pse', needsTermsAcceptance: true });
+    expect(catalog.pseBanks?.[0]?.code).toBe('1007');
+
+    const payment = await vexpay.cop.payments.create({
+      amountCop: 80000,
+      channel: 'pse',
+      pse: { bankCode: catalog.pseBanks![0]!.code },
+      buyer: {
+        firstName: 'Juan', lastName: 'Pérez', personType: 'natural', email: 'juan@example.com', phone: '3001234567',
+        documentType: 'CC', documentNumber: '1234567890', termsAccepted: true,
+      },
+    });
+    expect(payment.next).toEqual({ type: 'redirect', url: 'https://bank.example/pse' });
+    expect(server.requests.at(-1)!.body).toMatchObject({ pse: { bankCode: '1007' }, buyer: { termsAccepted: true, personType: 'natural' } });
   });
 
   it('reads the COP balance', async () => {

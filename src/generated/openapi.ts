@@ -564,6 +564,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cop/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List COP channels
+         * @description The COP channels you can use right now in this mode, with what each needs. When `pse` is listed, `pseBanks` gives the bank codes for `pse.bankCode`. When a channel needs terms acceptance, show the buyer the `terms` links before you send `buyer.termsAccepted: true`. `card` is listed with `checkoutOnly: true`: take it through the hosted checkout.
+         */
+        get: operations["CopPayments_channels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cop/payments": {
         parameters: {
             query?: never;
@@ -575,7 +595,7 @@ export interface paths {
         put?: never;
         /**
          * Create a COP payment
-         * @description Collect Colombian pesos with Bre-B (QR code or transfer key from any Colombian bank app), Nequi (push to the buyer's app) or Daviplata (SMS code). The response says what the buyer must do next. The payment completes asynchronously: listen for `payment.completed` / `payment.failed`, or read it back. Send an `Idempotency-Key` to retry safely.
+         * @description Collect Colombian pesos with Bre-B (QR code or transfer key from any Colombian bank app), Nequi (push to the buyer's app), Daviplata (SMS code or redirect), PSE and Bancolombia (redirect to the buyer's bank) or Bancolombia QR. See `GET /v1/cop/channels` for what you can use and what each needs. The response says what the buyer must do next. The payment completes asynchronously: listen for `payment.completed` / `payment.failed`, or read it back. Send an `Idempotency-Key` to retry safely.
          */
         post: operations["CopPayments_create"];
         delete?: never;
@@ -649,7 +669,7 @@ export interface paths {
         put?: never;
         /**
          * Refund a COP payment in full
-         * @description Allowed within 96 hours of completion. The amount credited to you is debited from your COP balance and the fee is returned. Partial refunds are not supported.
+         * @description Bre-B, Nequi and Daviplata payments with an SMS code: within 96 hours of completion. Card: within the void window (24 hours). Other channels answer `refund_not_supported`. The amount credited to you is debited from your COP balance and the fee is returned. Partial refunds are not supported.
          */
         post: operations["CopPayments_refund"];
         delete?: never;
@@ -1162,9 +1182,49 @@ export interface paths {
         put?: never;
         /**
          * Transfer platform float to seller pending balance
-         * @description Debits tenant available (SELLER_TRANSFER) and credits merchant pending. When sellerHoldBusinessDays is 0, funds release to available immediately.
+         * @description Debits the tenant balance (SELLER_TRANSFER, available first, then funds still under the balance hold) and credits merchant pending. Send `amountVes`, or `amountUsd` to credit a USD amount converted at the official BCV rate (saved with the transfer; a replay with the same `transferKey` returns the original amounts and rate). When sellerHoldBusinessDays is 0 the credit is available at once, except the part paid with held funds, which becomes available when that hold ends. 503 `rate_unavailable` when no BCV rate can be read (nothing is recorded).
          */
         post: operations["Merchants_transfer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{id}/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List seller balance movements
+         * @description Every movement in this merchant's VES balance, newest first: credits (with `transferKey`, and `amountUsd` / `rate` when credited in USD), releases from pending to available, withdrawals, withdrawal fees, reversals and adjustments. `amountVes` is the signed change of the total balance (pending + available); a `release` row only moves money from pending to available, so its `amountVes` is 0.00 and `releasedVes` carries the amount. Page with `cursor`; a page can hold fewer than `limit` items.
+         */
+        get: operations["Merchants_listTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Monthly seller statement
+         * @description Opening balance, every movement in the calendar month (America/Caracas time, oldest first) and closing balance; openingVes + Σ amountVes = closingVes. With `format=csv` returns the same as CSV with a running balance column.
+         */
+        get: operations["Merchants_statement"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1386,6 +1446,87 @@ export interface paths {
          * @description Enable/disable it (status), toggle allowQuantity, set maxQuantity or redirectUrl.
          */
         patch: operations["PaymentLinks_update"];
+        trace?: never;
+    };
+    "/v1/balance/topups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List balance top-ups
+         * @description Your latest top-ups, newest first, with this month’s limit usage.
+         */
+        get: operations["Topups_list"];
+        put?: never;
+        /**
+         * Start a balance top-up
+         * @description Load your own Bs balance with money that is not a sale (for example advertising income). Send the exact `amountVes` by Pago Móvil from `payerPhone` to the returned receiver before `expiresAt` (15 minutes); the top-up completes on its own when the transfer arrives. The fee (`feePercent` + `feeFixedUsd` at BCV) is charged on completion and the credit is held like any other credit, unless you release it early with POST /v1/balance/topups/{id}/instant. Each top-up needs a source-of-funds note and counts against your monthly limit (422 `topup_cap_exceeded`).
+         */
+        post: operations["Topups_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/balance/topups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a balance top-up */
+        get: operations["Topups_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/balance/topups/{id}/instant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Make a held top-up available now
+         * @description Releases the part of a completed top-up that is still held, for `instantFeePercent` of it (`instantFeeVes`). Idempotent: a repeat returns the same top-up without charging again. Only top-ups can be released early.
+         */
+        post: operations["Topups_instant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/balance/topups/{id}/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test mode: complete a top-up
+         * @description Test-mode accounts only (404 on live): completes the top-up as if the Pago Móvil arrived.
+         */
+        post: operations["Topups_simulate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/notifications/test": {
@@ -1765,7 +1906,7 @@ export interface components {
              * @example chargeback
              * @enum {string}
              */
-            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee";
+            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee";
             /**
              * @description Signed VES amount (negative = money out of your balance).
              * @example -4000.00
@@ -1905,10 +2046,16 @@ export interface components {
              */
             feePercent?: string;
             /**
-             * @description Platform fee in VES retained on instant tenant credits.
+             * @description Platform fee in VES: retained on instant tenant credits, or the end-user withdrawal fee on a disbursement payout (see feePayer).
              * @example 2.50
              */
             feeVes?: string;
+            /**
+             * @description Set to "tenant" when your balance paid feeVes (disbursement withdrawal fee): the end user was debited only monto.
+             * @example tenant
+             * @enum {string}
+             */
+            feePayer?: "tenant";
             concepto?: string;
             /**
              * @description Destination bank SIMF code.
@@ -1977,10 +2124,16 @@ export interface components {
              */
             feePercent?: string;
             /**
-             * @description Platform fee in VES retained on instant tenant credits.
+             * @description Platform fee in VES: retained on instant tenant credits, or the end-user withdrawal fee on a disbursement payout (see feePayer).
              * @example 2.50
              */
             feeVes?: string;
+            /**
+             * @description Set to "tenant" when your balance paid feeVes (disbursement withdrawal fee): the end user was debited only monto.
+             * @example tenant
+             * @enum {string}
+             */
+            feePayer?: "tenant";
             concepto?: string;
             /**
              * @description Destination bank SIMF code.
@@ -2829,13 +2982,61 @@ export interface components {
             /** Format: date-time */
             completedAt?: string;
         };
+        CopChannelDto: {
+            /**
+             * @example pse
+             * @enum {string}
+             */
+            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
+            /**
+             * @description Buyer-facing name (Spanish).
+             * @example PSE
+             */
+            label: string;
+            /**
+             * @description A `buyer` object is required.
+             * @example true
+             */
+            needsBuyer: boolean;
+            /**
+             * @description Show the buyer the `terms` links and send `buyer.termsAccepted: true`.
+             * @example true
+             */
+            needsTermsAcceptance: boolean;
+            /**
+             * @description Only through the hosted checkout (checkout sessions or payment links), never `POST /v1/cop/payments`.
+             * @example false
+             */
+            checkoutOnly: boolean;
+            /** @example 20000 */
+            minAmountCop: number;
+        };
+        CopPseBankDto: {
+            /** @example 1007 */
+            code: string;
+            /** @example Bancolombia */
+            name: string;
+        };
+        CopTermsDto: {
+            /** @description Terms and conditions the buyer accepts. */
+            termsUrl: string;
+            /** @description Personal data processing authorization the buyer accepts. */
+            personalDataUrl: string;
+        };
+        CopChannelsDto: {
+            channels: components["schemas"]["CopChannelDto"][];
+            /** @description Present when `pse` is listed: banks for `pse.bankCode`. */
+            pseBanks?: components["schemas"]["CopPseBankDto"][];
+            /** @description Present when a listed channel needs terms acceptance. */
+            terms?: components["schemas"]["CopTermsDto"];
+        };
         CopBuyerDto: {
             /** @example Juan */
             firstName?: string;
             /** @example Pérez */
             lastName?: string;
             /**
-             * @description Required for Nequi and Daviplata.
+             * @description Required for every channel except `breb`.
              * @example juan@example.com
              */
             email?: string;
@@ -2851,10 +3052,28 @@ export interface components {
              */
             documentType?: "CC" | "CE" | "TI" | "NIT" | "PP";
             /**
-             * @description National document number. Required for Nequi and Daviplata.
+             * @description National document number. Required for every channel except `breb`.
              * @example 1234567890
              */
             documentNumber?: string;
+            /**
+             * @description PSE only (required): `natural` person or `juridica` (company).
+             * @example natural
+             * @enum {string}
+             */
+            personType?: "natural" | "juridica";
+            /**
+             * @description Required (`true`) for channels the channel catalog marks `needsTermsAcceptance`: confirms you showed the buyer the catalog `terms` links.
+             * @example true
+             */
+            termsAccepted?: boolean;
+        };
+        CopPseDto: {
+            /**
+             * @description Bank code from `GET /v1/cop/channels` → `pseBanks`.
+             * @example 1007
+             */
+            bankCode: string;
         };
         CreateCopPaymentDto: {
             /**
@@ -2863,11 +3082,11 @@ export interface components {
              */
             amountCop: number;
             /**
-             * @description `breb`: QR code / transfer key the buyer pays from any Colombian bank app. `nequi`: push to the buyer's Nequi app. `daviplata`: SMS code the buyer reads to you.
+             * @description `breb`: QR code / transfer key the buyer pays from any Colombian bank app. `nequi`: push to the buyer's Nequi app. `daviplata`: SMS code the buyer reads to you, or a redirect. `pse` and `bancolombia_transfer`: redirect to the buyer's bank. `bancolombia_qr`: QR the buyer scans in the Bancolombia app. `card`: hosted checkout only (`channel_requires_checkout`).
              * @example breb
              * @enum {string}
              */
-            channel: "breb" | "nequi" | "daviplata";
+            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
             /**
              * @description Shown to the buyer.
              * @example Order 1042
@@ -2887,14 +3106,26 @@ export interface components {
             metadata?: {
                 [key: string]: string;
             };
-            /** @description Required for `nequi` and `daviplata`; optional for `breb`. */
+            /** @description Required for every channel except `breb`. */
             buyer?: components["schemas"]["CopBuyerDto"];
+            /** @description Required for `pse`. */
+            pse?: components["schemas"]["CopPseDto"];
         };
         CopNextActionDto: {
-            /** @enum {string} */
-            type: "show_qr" | "approve_in_app" | "submit_otp";
+            /**
+             * @description `redirect`: send the buyer to `url` to authorize at their bank. `redirect_pending`: the URL is not ready yet — read the payment again. `processing`: nothing to do, the outcome follows.
+             * @enum {string}
+             */
+            type: "show_qr" | "approve_in_app" | "submit_otp" | "redirect" | "redirect_pending" | "processing";
             /** @description Bre-B: base64 PNG of the payment QR. Returned only when the payment is created. */
             qrPngBase64?: string;
+            /** @description Bancolombia QR: base64 SVG of the payment QR. */
+            qrSvgBase64?: string;
+            /**
+             * @description `redirect`: where the buyer authorizes the payment.
+             * @example https://…
+             */
+            url?: string;
             /** @description Bre-B: transfer key the buyer can enter instead of scanning. */
             transferKey?: string;
             /**
@@ -2911,7 +3142,7 @@ export interface components {
             /** @enum {string} */
             method: "COP";
             /** @enum {string} */
-            channel: "breb" | "nequi" | "daviplata";
+            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
             /** @example 100000 */
             amountCop: number;
             /**
@@ -2934,16 +3165,27 @@ export interface components {
             metadata: {
                 [key: string]: string;
             };
-            /** @enum {string} */
-            failureCode?: "expired" | "rejected" | "processor_error" | "processor_unknown";
+            /**
+             * @description `chargeback`: a refunded card payment the buyer disputed with their bank.
+             * @enum {string}
+             */
+            failureCode?: "expired" | "rejected" | "processor_error" | "processor_unknown" | "chargeback";
             /** Format: date-time */
             expiresAt?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             completedAt?: string;
-            /** @description What the buyer must do next. Returned when the payment is created. */
+            /** @description What the buyer must do next. Returned when the payment is created, and on reads while a bank redirect or QR is pending. */
             next?: components["schemas"]["CopNextActionDto"];
+            /**
+             * @description Card payments: brand and last 4 digits, once known.
+             * @example {
+             *       "brand": "VISA",
+             *       "last4": "4242"
+             *     }
+             */
+            card?: Record<string, never>;
         };
         SubmitCopOtpDto: {
             /**
@@ -3953,10 +4195,15 @@ export interface components {
         };
         CreateMerchantTransferDto: {
             /**
-             * @description Exact two-decimal VES amount to move from platform float → seller pending.
+             * @description Exact two-decimal VES amount to move from platform float → seller pending. Send this or `amountUsd`, not both.
              * @example 1523.40
              */
-            amountVes: string;
+            amountVes?: string;
+            /**
+             * @description Exact two-decimal USD amount, converted to VES at the official BCV rate at the time of the request (regardless of your account’s Bolívar rate setting). The rate is saved with the transfer and a replay returns it. Send this or `amountVes`, not both.
+             * @example 100.00
+             */
+            amountUsd?: string;
             /**
              * @description Idempotency key for this transfer under the merchant.
              * @example xfer_bid_1042
@@ -3967,6 +4214,136 @@ export interface components {
              * @description Optional funding payment correlation (does not enforce remaining-net).
              */
             paymentId?: string;
+        };
+        MerchantTransferSnapshotDto: {
+            /** @example q1-nov-2026-u123 */
+            transferKey: string;
+            /**
+             * @description VES credited to the merchant.
+             * @example 21540.00
+             */
+            amountVes: string;
+            /**
+             * @description USD transfers only: the USD amount requested.
+             * @example 100.00
+             */
+            amountUsd?: string;
+            /**
+             * @description USD transfers only: the BCV rate used.
+             * @example 215.4000
+             */
+            rate?: string;
+            /**
+             * @description USD transfers only: always `bcv`.
+             * @example bcv
+             */
+            rateSource?: string;
+            /**
+             * Format: date-time
+             * @description USD transfers only: when the rate was read.
+             */
+            rateAsOf?: string;
+        };
+        MerchantTransferResponseDto: {
+            /** Format: uuid */
+            merchantId: string;
+            /** @example acct_3fd84b2d9ad14f74a2d90f2f56984db5 */
+            accountId: string;
+            /** Format: uuid */
+            tenantId: string;
+            /** @example 100.00 */
+            pendingVes: string;
+            /** @example 250.00 */
+            availableVes: string;
+            /** @example 50.00 */
+            paidOutVes: string;
+            /** @example 350.00 */
+            ledgerNetVes: string;
+            /** @description COP balances from COP sales on seller links. Present only once the seller has COP activity. */
+            cop?: components["schemas"]["MerchantCopBalanceDto"];
+            /** @description What this transfer credited (the original values on a replay). */
+            transfer: components["schemas"]["MerchantTransferSnapshotDto"];
+        };
+        MerchantMovementDto: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @example credit
+             * @enum {string}
+             */
+            type: "credit" | "release" | "reversal" | "payout" | "payout_reversal" | "payout_fee" | "payout_fee_reversal" | "adjustment";
+            /**
+             * @description Signed change of the total balance (pending + available). A `release` row is 0.00.
+             * @example 21540.00
+             */
+            amountVes: string;
+            /**
+             * @description `release` rows only: VES moved from pending to available (negative = put back on hold).
+             * @example 21540.00
+             */
+            releasedVes?: string;
+            /** @example Credit */
+            description: string;
+            /**
+             * @description `credit` rows: the transferKey you sent.
+             * @example q1-nov-u1
+             */
+            transferKey?: string;
+            /** Format: uuid */
+            paymentId?: string | null;
+            /** Format: uuid */
+            payoutId?: string | null;
+            /**
+             * Format: date-time
+             * @description `credit` rows: when the credit becomes withdrawable.
+             */
+            availableAt?: string | null;
+            /**
+             * @description Credits sent with `amountUsd`: the USD amount.
+             * @example 100.00
+             */
+            amountUsd?: string;
+            /**
+             * @description Credits sent with `amountUsd`: the rate used.
+             * @example 215.4000
+             */
+            rate?: string;
+            /** @example bcv */
+            rateSource?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        MerchantMovementListDto: {
+            items: components["schemas"]["MerchantMovementDto"][];
+            /** @description Pass as `cursor` for the next (older) page; null on the last page. */
+            nextCursor: string | null;
+        };
+        MerchantStatementDto: {
+            /** Format: uuid */
+            merchantId: string;
+            /** @example 2026-11 */
+            month: string;
+            /**
+             * Format: date-time
+             * @description Month start, America/Caracas.
+             * @example 2026-11-01T04:00:00.000Z
+             */
+            from: string;
+            /**
+             * Format: date-time
+             * @description Month end (exclusive), America/Caracas.
+             * @example 2026-12-01T04:00:00.000Z
+             */
+            to: string;
+            /** @example 0.00 */
+            openingVes: string;
+            /**
+             * @description openingVes + Σ movements[].amountVes.
+             * @example 21800.00
+             */
+            closingVes: string;
+            /** @description Oldest first. */
+            movements: components["schemas"]["MerchantMovementDto"][];
         };
         UpdateMerchantDto: {
             /** @description Soft off-switch for payouts. false = deactivated (history kept). */
@@ -4169,6 +4546,104 @@ export interface components {
             allowQuantity?: boolean;
             maxQuantity?: number | null;
             redirectUrl?: string | null;
+        };
+        CreateTopupDto: {
+            /**
+             * @description Bs to load, two decimals, above 0.
+             * @example 100000.00
+             */
+            amountVes: string;
+            /**
+             * @description Phone the Pago Móvil is sent from (Venezuelan mobile, 04XXXXXXXXX).
+             * @example 04121234567
+             */
+            payerPhone: string;
+            /**
+             * @description Cédula or RIF of the payer.
+             * @example V12345678
+             */
+            payerCedula: string;
+            /**
+             * @description Where the money comes from (10–500 characters). Visible to VEX Pay ops.
+             * @example Ingresos de publicidad, quincena 2
+             */
+            sourceNote: string;
+        };
+        TopupReceiverDto: {
+            /**
+             * @description Bank code to pick in your bank app. The bank name is not shown.
+             * @example 0169
+             */
+            bankCode: string;
+            /** @example 04140000000 */
+            phone: string;
+            /** @example J-000000000 */
+            identification: string;
+        };
+        TopupDto: {
+            id: string;
+            /** @enum {string} */
+            status: "pending" | "completed" | "expired" | "failed" | "reversed";
+            /** @example 100000.00 */
+            amountVes: string;
+            /**
+             * @description USD at the BCV rate snapshotted at creation.
+             * @example 500.00
+             */
+            amountUsd: string;
+            /** @example 200.0000 */
+            bcvRate: string;
+            /** @example 3.5000 */
+            feePercent: string;
+            /** @example 0.25 */
+            feeFixedUsd: string;
+            /**
+             * @description Charged when the top-up completes.
+             * @example 3550.00
+             */
+            feeVes?: string;
+            /**
+             * @description Credited to your balance (amount − fee).
+             * @example 96450.00
+             */
+            creditedVes?: string;
+            sourceNote: string;
+            payerPhone: string;
+            bankReference?: string;
+            expiresAt: string;
+            completedAt?: string;
+            /** @description When the credit becomes available on its own (null = available). */
+            availableAt?: string;
+            /**
+             * @description Part of this top-up still held.
+             * @example 96450.00
+             */
+            heldVes: string;
+            /**
+             * @description Instant availability fee percent.
+             * @example 1.5000
+             */
+            instantFeePercent: string;
+            /**
+             * @description Fee to release heldVes now.
+             * @example 1446.75
+             */
+            instantFeeVes: string;
+            /** @description When the held part was released early with the instant fee. */
+            instantReleasedAt?: string;
+            /** @description Where to send the Pago Móvil (pending only). */
+            receiver?: components["schemas"]["TopupReceiverDto"];
+            test: boolean;
+            createdAt: string;
+        };
+        TopupListDto: {
+            data: components["schemas"]["TopupDto"][];
+            /** @example 3000.00 */
+            monthlyCapUsd: string | null;
+            /** @example 500.00 */
+            monthUsedUsd: string;
+            /** @example 2500.00 */
+            monthRemainingUsd: string;
         };
         NotificationTestResponseDto: {
             /** @example true */
@@ -4574,7 +5049,7 @@ export interface operations {
                 /** @description Only movements of this payment. */
                 paymentId?: string;
                 /** @description One or more types (repeat or comma-separate). */
-                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee")[];
+                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee")[];
                 /** @description `nextCursor` from the previous page. */
                 cursor?: string;
                 /** @description 1–100, default 50. */
@@ -7030,6 +7505,61 @@ export interface operations {
             };
         };
     };
+    CopPayments_channels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CopChannelsDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `method_not_allowed` — COP is not enabled for this account. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     CopPayments_create: {
         parameters: {
             query?: never;
@@ -7054,7 +7584,7 @@ export interface operations {
                     "application/json": components["schemas"]["CopPaymentDto"];
                 };
             };
-            /** @description `invalid_data` (names the field) or `amount_out_of_range`. */
+            /** @description `invalid_data` (names the field), `amount_below_minimum`, `amount_out_of_range`, or `channel_requires_checkout` (card). */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -7399,7 +7929,7 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
-            /** @description `invalid_state`, `refund_window_expired` or `insufficient_balance`. */
+            /** @description `invalid_state`, `refund_not_supported` (the channel has no refunds), `refund_window_expired` or `insufficient_balance`. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -9587,7 +10117,169 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MerchantBalanceDto"];
+                    "application/json": components["schemas"]["MerchantTransferResponseDto"];
+                };
+            };
+            /** @description Validation failure. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Merchants_listTransactions: {
+        parameters: {
+            query?: {
+                /** @description ISO 8601, exclusive (createdAt). */
+                to?: string;
+                /** @description ISO 8601, inclusive (createdAt). */
+                from?: string;
+                /** @description `nextCursor` from the previous page. */
+                cursor?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantMovementListDto"];
+                };
+            };
+            /** @description Validation failure. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Merchants_statement: {
+        parameters: {
+            query: {
+                /** @description YYYY-MM. */
+                month: string;
+                /** @description Default json. */
+                format?: "json" | "csv";
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MerchantStatementDto"];
                 };
             };
             /** @description Validation failure. */
@@ -10961,6 +11653,321 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Topups_list: {
+        parameters: {
+            query?: {
+                /** @description 1–100, default 20. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupListDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Topups_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTopupDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topup_cap_exceeded` — over the monthly limit (includes `remainingUsd` / `remainingVes`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Topups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Topups_instant: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `not_held` — nothing of this top-up is still held. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Topups_simulate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopupDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

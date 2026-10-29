@@ -28,9 +28,42 @@ export class BalanceTransactions extends APIResource {
   }
 }
 
+/**
+ * Load your own Bs balance by Pago Móvil (money that is not a sale). Send the exact `amountVes` from
+ * `payerPhone` to the returned `receiver` before `expiresAt`; the top-up completes when the transfer
+ * arrives. Each top-up needs a `sourceNote` and counts against your monthly limit. Enabled per account
+ * (`topups_not_enabled`, 403).
+ */
+export class BalanceTopups extends APIResource {
+  /** Start a top-up. Over the monthly limit fails with `topup_cap_exceeded` (422). */
+  create(params: RequestBody<'Topups_create'>, options?: RequestOptions) {
+    return this.call('Topups_create', { body: params }, options);
+  }
+
+  /** Your latest top-ups (newest first, `limit` 1–100) plus this month's limit usage. */
+  list(params: QueryParams<'Topups_list'> = {}, options?: RequestOptions) {
+    return this.call('Topups_list', { query: params }, options);
+  }
+
+  retrieve(id: string, options?: RequestOptions) {
+    return this.call('Topups_get', { path: { id } }, options);
+  }
+
+  /** Release the still-held part of a completed top-up now, for `instantFeeVes`. Idempotent; `not_held` (409) if nothing is held. */
+  instant(id: string, options?: RequestOptions) {
+    return this.call('Topups_instant', { path: { id } }, options);
+  }
+
+  /** Test mode only: complete the top-up as if the Pago Móvil arrived. */
+  simulate(id: string, options?: RequestOptions) {
+    return this.call('Topups_simulate', { path: { id } }, options);
+  }
+}
+
 /** Your platform balance. */
 export class Balance extends APIResource {
   readonly transactions = new BalanceTransactions(this.http);
+  readonly topups = new BalanceTopups(this.http);
 
   retrieve(options?: RequestOptions) {
     return this.call('Balance_getBalance', {}, options);

@@ -1,5 +1,13 @@
 # @vexpay/node
 
+## 0.13.0
+
+### Minor Changes
+
+- COP: new channels `pse`, `bancolombia_transfer` and `bancolombia_qr` (and `card`, taken only on the hosted checkout). `cop.channels()` lists the channels your account can use now, the PSE banks and the terms links. `cop.payments.create` takes `pse.bankCode`, `buyer.firstName`/`lastName`/`personType` and `buyer.termsAccepted`; `next` adds `redirect` (with `url`), `redirect_pending`, `processing` and `show_qr.qrSvgBase64`. Card payments carry `card: { brand, last4 }`; a card dispute sends `payment.reversed` with `reason: "chargeback"`. Refunds of channels without API refunds fail with `refund_not_supported`.
+- Disbursements: `merchants.transfer(id, { amountUsd | amountVes, transferKey })` credits a seller from your balance (USD converted at the official BCV rate; `transfer` in the response carries the amounts and rate). `merchants.listTransactions(id)` lists the seller's balance movements (auto-paginates) and `merchants.retrieveStatement(id, { month })` / `retrieveStatementCsv` return the monthly statement. Payout webhooks report `feePaidByTenant` and `feeVes` when your balance pays a disbursement's withdrawal fee.
+- Balance top-ups: `balance.topups.create / list / retrieve / instant / simulate` load your own Bs balance by Pago Móvil (money that is not a sale). `instant` makes a held top-up available now for its instant fee; `simulate` completes a top-up in test mode. Enabled per account by VEX Pay (`topups_not_enabled`); over the monthly limit fails with `topup_cap_exceeded`. Balance transactions add the types `topup`, `topup_fee`, `topup_instant_release` and `topup_instant_fee`.
+
 ## 0.12.0
 
 ### Minor Changes

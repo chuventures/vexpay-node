@@ -4,6 +4,8 @@ import { APIResource } from '../resource';
 import type { QueryParams, RequestBody, Schemas } from '../types';
 
 export type MerchantListParams = Omit<QueryParams<'Merchants_listOrGetByRef'>, 'externalRef'>;
+export type MerchantTransactionListParams = QueryParams<'Merchants_listTransactions'>;
+export type MerchantStatementParams = Omit<QueryParams<'Merchants_statement'>, 'format'>;
 
 /** Where a merchant gets paid (bank account or Pago Móvil). */
 export class PayoutMethods extends APIResource {
@@ -85,9 +87,37 @@ export class Merchants extends APIResource {
     return this.call('Merchants_getBalance', { path: { id } }, options);
   }
 
-  /** Move VES between this merchant's balance and another. */
+  /**
+   * Credit this seller's pending balance from your platform balance. Send `amountVes`, or
+   * `amountUsd` to convert at the official BCV rate; `transferKey` makes it idempotent.
+   * The response is the seller balance plus `transfer` (amounts and rate used).
+   */
   transfer(id: string, params: RequestBody<'Merchants_transfer'>, options?: RequestOptions) {
     return this.call('Merchants_transfer', { path: { id }, body: params }, options);
+  }
+
+  /** Seller balance movements, newest first. Await for one page, or `for await` over every movement. */
+  listTransactions(id: string, params: MerchantTransactionListParams = {}, options?: RequestOptions) {
+    return new PagePromise(
+      (cursor) =>
+        this.call('Merchants_listTransactions', { path: { id }, query: { ...params, cursor } }, options),
+      params.cursor,
+    );
+  }
+
+  /** Monthly statement (`month: 'YYYY-MM'`, America/Caracas): opening, movements, closing. */
+  retrieveStatement(id: string, params: MerchantStatementParams, options?: RequestOptions) {
+    return this.call('Merchants_statement', { path: { id }, query: { ...params, format: 'json' } }, options);
+  }
+
+  /** The same monthly statement as CSV (with a running balance column), returned as a string. */
+  async retrieveStatementCsv(id: string, params: MerchantStatementParams, options?: RequestOptions): Promise<string> {
+    const body: unknown = await this.call(
+      'Merchants_statement',
+      { path: { id }, query: { ...params, format: 'csv' } },
+      options,
+    );
+    return typeof body === 'string' ? body : '';
   }
 
   listAuditEvents(id: string, options?: RequestOptions) {

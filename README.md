@@ -177,12 +177,27 @@ await vexpay.conversions.settings.update({ autoConvert: { COP: { percent: 50 } }
 
 ## Colombian pesos (COP)
 
-Collect pesos from buyers in Colombia through Bre-B, Nequi or Daviplata. Amounts are whole pesos, payments complete asynchronously (`payment.completed` / `payment.failed`), and completed payments go to your COP balance net of the COP fee. COP must be enabled on your account — otherwise the calls fail with `method_not_allowed` (403).
+Collect pesos from buyers in Colombia through PSE, Bancolombia (transfer or QR), Bre-B, Nequi or Daviplata — and cards on the hosted checkout. Amounts are whole pesos, payments complete asynchronously (`payment.completed` / `payment.failed`), and completed payments go to your COP balance net of the COP fee. COP must be enabled on your account — otherwise the calls fail with `method_not_allowed` (403).
 
 ```ts
 import VexPay from '@vexpay/node';
 
 const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+// What your account can use now, the PSE banks, and the terms links some channels need.
+const { channels, pseBanks, terms } = await vexpay.cop.channels();
+
+// PSE: send the buyer to their bank (next.url). On redirect_pending, retrieve again in a few seconds.
+const pse = await vexpay.cop.payments.create({
+  amountCop: 80000,
+  channel: 'pse',
+  pse: { bankCode: pseBanks![0]!.code },
+  buyer: {
+    firstName: 'Juan', lastName: 'Pérez', personType: 'natural', email: 'juan@example.com', phone: '3001234567',
+    documentType: 'CC', documentNumber: '1234567890', termsAccepted: true, // the buyer accepted `terms`
+  },
+});
+if (pse.next?.type === 'redirect') console.log('Send the buyer to', pse.next.url);
 
 // Bre-B: no buyer data. Show next.qrPngBase64 as an image and next.transferKey as text.
 const breb = await vexpay.cop.payments.create(
@@ -194,10 +209,10 @@ const breb = await vexpay.cop.payments.create(
 await vexpay.cop.payments.create({
   amountCop: 50000,
   channel: 'nequi',
-  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890' },
+  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890', termsAccepted: true },
 });
 
-// Daviplata: the buyer reads you the SMS code; submit it.
+// Daviplata: with next.type 'submit_otp' the buyer reads you the SMS code; submit it (otherwise follow next.url).
 const davi = await vexpay.cop.payments.create({
   amountCop: 50000,
   channel: 'daviplata',
@@ -209,15 +224,17 @@ const status = (await vexpay.cop.payments.retrieve(breb.id)).status; // pending 
 const { availableCop } = await vexpay.cop.balance.retrieve();
 ```
 
-`cancel(id)` cancels a pending payment and `refund(id)` refunds a completed one in full within 96 hours. A webhook for a COP payment has `data.method === 'COP'`; read it as `CopPaymentWebhookData`.
+`cancel(id)` cancels a pending payment and `refund(id)` refunds a completed one in full (cards within 24 hours, Bre-B within 96 hours; channels without API refunds fail with `refund_not_supported`). Send `buyer.termsAccepted: true` for channels whose catalog entry has `needsTermsAcceptance`. A webhook for a COP payment has `data.method === 'COP'`; read it as `CopPaymentWebhookData`.
 
 **Test mode** (test API keys use a sandbox):
 
 | Channel | What to use | Result |
 |---|---|---|
 | Bre-B | No buyer data | QR and key from the sandbox. **Never send real money to them** — sandbox keys are reachable from real banks and the money is not credited. |
-| Nequi | Any valid data, e.g. phone `3001234567`, `CC` `1234567890`, any email | Completes on its own within about a minute |
-| Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp` |
+| Nequi | Phone `3991111111`, any valid document and email | Completes on its own within about a minute; `3992222222` is declined |
+| Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | With `submit_otp`, OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp`. With `redirect`, follow the test page |
+| PSE | Any valid buyer data | Bank code `1` approves, `2` declines |
+| Card (hosted checkout) | `4242 4242 4242 4242`, any future expiry and CVC | Approved; `4111 1111 1111 1111` is declined |
 
 ## Subscriptions
 
@@ -315,6 +332,32 @@ const page = await vexpay.balance.transactions.list({ paymentId: 'pay_…', type
 console.log(page.items.map((m) => [m.type, m.amountVes]));
 ```
 
+## Top up your balance
+
+Load your own Bs balance by Pago Móvil — for money that is not a sale (for example advertising income). Send the exact `amountVes` from `payerPhone` to the returned `receiver` before `expiresAt` (15 minutes); the top-up completes on its own when the transfer arrives, and its fee is charged then. The credit is held like any other credit unless you release it early with `instant` (for `instantFeeVes`). Each top-up needs a `sourceNote` and counts against your monthly limit (`topup_cap_exceeded`, 422, with `remainingUsd`/`remainingVes` in the error body). Top-ups are enabled per account (`topups_not_enabled`, 403). In balance movements they appear as `topup`, `topup_fee`, `topup_instant_release` and `topup_instant_fee`.
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+
+const topup = await vexpay.balance.topups.create({
+  amountVes: '100000.00',
+  payerPhone: '04121234567',
+  payerCedula: 'V12345678',
+  sourceNote: 'Ingresos publicidad quincena 2',
+});
+console.log(topup.receiver, topup.expiresAt); // where and until when to send the Pago Móvil
+
+const { data, monthRemainingUsd } = await vexpay.balance.topups.list({ limit: 20 });
+console.log(data.length, monthRemainingUsd); // newest first, plus what is left of this month's limit (USD)
+const latest = await vexpay.balance.topups.retrieve(topup.id);
+if (latest.status === 'completed' && latest.heldVes !== '0.00') {
+  await vexpay.balance.topups.instant(topup.id); // idempotent; `not_held` (409) when nothing is held
+}
+// Test mode only: await vexpay.balance.topups.simulate(topup.id);
+```
+
 ## Errors
 
 Every error extends `VexPayError` and carries `status`, the API `code` (e.g. `insufficient_balance`), and the response `body`.
@@ -377,6 +420,32 @@ await vexpay.payments.c2p.execute(
 );
 ```
 
+## Seller balances
+
+Credit a seller from your platform balance in bolívares, or in dollars converted at the official BCV rate, then read their movements and monthly statement:
+
+```ts
+import VexPay from '@vexpay/node';
+
+const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
+const merchantId = '00000000-0000-4000-8000-000000000002';
+
+const balance = await vexpay.merchants.transfer(merchantId, { amountUsd: '100.00', transferKey: 'payroll-2026-11-u1' });
+console.log(balance.pendingVes, balance.transfer.amountVes, balance.transfer.rate);
+
+for await (const movement of vexpay.merchants.listTransactions(merchantId, { from: '2026-11-01T00:00:00Z' })) {
+  console.log(movement.type, movement.amountVes);
+}
+
+const statement = await vexpay.merchants.retrieveStatement(merchantId, { month: '2026-11' });
+console.log(statement.openingVes, statement.closingVes, statement.movements.length);
+
+const csv = await vexpay.merchants.retrieveStatementCsv(merchantId, { month: '2026-11' });
+console.log(csv.split('\n')[0]);
+```
+
+A transfer with `amountUsd` fails with `rate_unavailable` (503) when no BCV rate can be read; nothing is recorded.
+
 ## Pagination
 
 `list()` methods on payouts, merchants, products, customers, prices, subscriptions and invoices return the first page when awaited, and every item when iterated:
@@ -434,6 +503,7 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `quotes` | `retrieve` |
 | `balance` | `retrieve` |
 | `balance.transactions` | `list` |
+| `balance.topups` | `create`, `list`, `retrieve`, `instant`, `simulate` |
 | `payments` | `retrieve`, `retrieveByRef`, `reverse` |
 | `payments.c2p` | `request`, `execute` |
 | `payments.vpos` | `create` |
@@ -449,8 +519,9 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `conversions.quotes` | `create` |
 | `conversions.settings` | `retrieve`, `update` |
 | `cop.payments` | `create`, `retrieve`, `submitOtp`, `cancel`, `refund` |
+| `cop` | `channels` |
 | `cop.balance` | `retrieve` |
-| `merchants` | `create`, `list`, `retrieve`, `retrieveByRef`, `update`, `delete`, `retrieveBalance`, `transfer`, `listAuditEvents`, `startVerification`, `confirmVerification` |
+| `merchants` | `create`, `list`, `retrieve`, `retrieveByRef`, `update`, `delete`, `retrieveBalance`, `transfer`, `listTransactions`, `retrieveStatement`, `retrieveStatementCsv`, `listAuditEvents`, `startVerification`, `confirmVerification` |
 | `merchants.payoutMethods` | `list`, `create`, `setDefault`, `delete`, `startVerification`, `confirmVerification` |
 | `payouts` | `create`, `createInstant`, `createBatch`, `list`, `retrieve`, `retrieveByRef` |
 | `products` | `create`, `list`, `retrieve`, `update`, `delete`, `createLink`, `listLinks` |
