@@ -507,6 +507,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/crypto/deposit-addresses/simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Simulate a deposit (Test mode)
+         * @description Test mode only. Credits a deposit to one of your deposit addresses (`customerRef` + `currency` + `network`, requested before) as if it had arrived on chain: a `COMPLETED` payment is created, your stablecoin fee is charged, the net is credited to your Test balance with the usual hold, and `payment.completed` is sent with `customerRef` and `livemode: false`. Each call is a new deposit. No processor call is made and no real funds move.
+         */
+        post: operations["Crypto_simulateDeposit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/crypto/networks": {
         parameters: {
             query?: never;
@@ -2858,6 +2878,88 @@ export interface components {
             tag?: string;
             /** @description True when the network requires the tag. */
             tagRequired: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SimulateDepositDto: {
+            /**
+             * @description The `customerRef` of a deposit address you already requested.
+             * @example user_123
+             */
+            customerRef: string;
+            /**
+             * @description Network of that deposit address.
+             * @example TRC20
+             * @enum {string}
+             */
+            network: "TRC20" | "BEP20" | "POLYGON" | "SOL" | "TON" | "ARB1" | "BASE";
+            /**
+             * @description Stablecoin of that deposit address.
+             * @default USDT
+             * @example USDT
+             * @enum {string}
+             */
+            currency?: "USDT" | "USDC";
+            /**
+             * @description Amount that "arrives", in `currency`: greater than 0, at most 10,000, at most 2 decimals.
+             * @example 40.00
+             */
+            amount: string | number;
+        };
+        SimulatedDepositDto: {
+            /** Format: uuid */
+            paymentId: string;
+            /**
+             * @example COMPLETED
+             * @enum {string}
+             */
+            status: "COMPLETED";
+            /**
+             * @example USDT
+             * @enum {string}
+             */
+            method: "USDT" | "USDC";
+            /**
+             * @example USDT
+             * @enum {string}
+             */
+            currency: "USDT" | "USDC";
+            /**
+             * @description Amount received, in `currency`.
+             * @example 40.00
+             */
+            amount: string;
+            /**
+             * @description Your stablecoin fee, in `currency`. The balance is credited `amount` − `fee`.
+             * @example 1.50
+             */
+            fee: string;
+            /**
+             * @description USDT only: same as `amount`.
+             * @example 40.00
+             */
+            amountUsdt?: string;
+            /**
+             * @description USDT only: same as `fee`.
+             * @example 1.50
+             */
+            feeUsdt?: string;
+            /** @example TRC20 */
+            network: string;
+            /** @example user_123 */
+            customerRef: string;
+            /**
+             * @description Always empty: nothing moved on chain.
+             * @example []
+             */
+            txHashes: string[];
+            /**
+             * @description Always false: simulated deposits exist in Test mode only.
+             * @example false
+             */
+            livemode: boolean;
+            /** @example true */
+            simulated: boolean;
             /** Format: date-time */
             createdAt: string;
         };
@@ -7253,6 +7355,87 @@ export interface operations {
             };
             /** @description `method_not_allowed` — that stablecoin is not enabled for this account. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Crypto_simulateDeposit: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulateDepositDto"];
+            };
+        };
+        responses: {
+            /** @description Deposit credited. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulatedDepositDto"];
+                };
+            };
+            /** @description `invalid_data` (amount missing, not above 0, above 10,000 or with more than 2 decimals) or `unsupported_currency`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `test_mode_only` — called with a Live key; or `method_not_allowed`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `not_found` — no deposit address was requested for that `customerRef`, `currency` and `network`. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

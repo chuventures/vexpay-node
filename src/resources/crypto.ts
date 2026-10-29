@@ -49,4 +49,13 @@ export class Crypto extends APIResource {
   readonly depositAddresses = new DepositAddresses(this.http);
   readonly networks = new CryptoNetworks(this.http);
   readonly payouts = new CryptoPayouts(this.http);
+
+  /**
+   * Test mode only: credit a deposit to one of your deposit addresses (`customerRef` + `currency` +
+   * `network`, requested before) as if it had arrived on chain. Sends `payment.completed` with
+   * `livemode: false`. A Live key gets 403 `test_mode_only`; an unknown address 404.
+   */
+  simulateDeposit(params: RequestBody<'Crypto_simulateDeposit'>, options?: RequestOptions) {
+    return this.call('Crypto_simulateDeposit', { body: params }, options);
+  }
 }

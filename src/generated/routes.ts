@@ -28,6 +28,7 @@ export const ROUTES = {
   Crypto_getBalances: { method: 'GET', path: '/v1/crypto/balances' },
   Crypto_getPayout: { method: 'GET', path: '/v1/crypto/payouts/{id}' },
   Crypto_listNetworks: { method: 'GET', path: '/v1/crypto/networks' },
+  Crypto_simulateDeposit: { method: 'POST', path: '/v1/crypto/deposit-addresses/simulate' },
   Customers_create: { method: 'POST', path: '/v1/customers' },
   Customers_list: { method: 'GET', path: '/v1/customers' },
   Customers_remove: { method: 'DELETE', path: '/v1/customers/{id}' },

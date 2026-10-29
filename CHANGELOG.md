@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.14.0
+
+### Minor Changes
+
+- Test mode: `crypto.simulateDeposit({ customerRef, network, currency?, amount })` makes a deposit arrive at one of your stablecoin deposit addresses: the same payment, fee, balance hold and `payment.completed` webhook (with `customerRef` and `livemode: false`) as a real deposit. A Live key gets 403 `test_mode_only`; an address you have not requested gets 404 `not_found`.
+
 ## 0.13.0
 
 ### Minor Changes

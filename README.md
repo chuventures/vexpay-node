@@ -109,6 +109,9 @@ const session = await vexpay.checkout.sessions.create({
 // Or a static deposit address per customer — every deposit fires payment.completed with this customerRef.
 const address = await vexpay.crypto.depositAddresses.create({ customerRef: 'user_123', network: 'BEP20' });
 
+// Test key only: make a deposit "arrive" at that address (same payment, fee and webhook, livemode: false).
+await vexpay.crypto.simulateDeposit({ customerRef: 'user_123', network: 'BEP20', amount: '40.00' });
+
 const balance = await vexpay.crypto.balance.retrieve();
 const networks = await vexpay.crypto.networks.list({ amountUsdt: '50.00' });
 
@@ -510,6 +513,7 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `payments.pagoMovil` | `verify` |
 | `payments.debit` · `credit` · `operations` · `dispersals` · `change` | débito/crédito inmediato and disbursements (advanced payments) |
 | `checkout.sessions` | `create`, `retrieve` |
+| `crypto` | `simulateDeposit` (Test mode only) |
 | `crypto.balance` | `retrieve` |
 | `crypto.balances` | `list` |
 | `crypto.depositAddresses` | `create` |
