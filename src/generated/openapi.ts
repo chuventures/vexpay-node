@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Get platform balance breakdown
-         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes. Incoming credits are held for 24h (`heldVes`, `nextReleaseAt`) before payouts can spend them.
+         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes. Bs from a payment becomes available once the bank confirms it (`unconfirmedVes` until then); available Bs is settled automatically to your verified payout account every 15 minutes (`settlement`).
          */
         get: operations["Balance_getBalance"];
         put?: never;
@@ -33,7 +33,7 @@ export interface paths {
         };
         /**
          * List balance movements
-         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes` and `heldVes`, `availableVes`), so you can reconcile your own ledger automatically. Movements still under the 24h balance hold carry `availableAt`. Page with `cursor`.
+         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes`, `heldVes` and `unconfirmedVes`, `availableVes`), so you can reconcile your own ledger automatically. Movements under a balance hold carry `availableAt`. Automatic settlements are payouts whose `externalRef` starts with `auto_settle_`. Page with `cursor`.
          */
         get: operations["Balance_listTransactions"];
         put?: never;
@@ -107,6 +107,8 @@ export interface paths {
          * @description Credits a verified merchant Pago Móvil method with an exact VES `monto`. `externalRef` is the idempotency key (same payload → 200 replay; conflicting payload → 409 `external_ref_conflict`). Requires an active merchant and a verified payout method.
          *
          *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *
+         *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
         post: operations["Payouts_create"];
         delete?: never;
@@ -129,6 +131,8 @@ export interface paths {
          * @description Credits the tenant’s verified Pago Móvil account (see GET /v1/tenant/payout-account). Requires a verified account that is eligible (first verify is immediate; destination changes require a completed 1 business-day cooling period). `monto` is the gross VES withdrawn from available balance; the bank receives monto minus feePercent.
          *
          *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *
+         *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
         post: operations["Payouts_createInstant"];
         delete?: never;
@@ -151,6 +155,8 @@ export interface paths {
          * @description Creates or replays a batch keyed by batch-level `externalRef`. Each item is processed independently; failures are returned inline with status `failed` and do not abort siblings. Item-level `externalRef` values remain individually idempotent.
          *
          *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *
+         *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
         post: operations["Payouts_createBatch"];
         delete?: never;
@@ -1833,6 +1839,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/test-clocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List test clocks (newest first, cursor pagination) */
+        get: operations["TestClocks_list"];
+        put?: never;
+        /** Create a test clock (test mode only) */
+        post: operations["TestClocks_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-clocks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Retrieve a test clock */
+        get: operations["TestClocks_retrieve"];
+        put?: never;
+        post?: never;
+        /** Delete a test clock with its customers, subscriptions, invoices and payment methods */
+        delete: operations["TestClocks_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/test-clocks/{id}/advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Advance a test clock
+         * @description Moves the clock forward. It becomes `advancing` and every billing event due up to the new time runs in time order, with its webhooks; then it is `ready` again and `test_clock.ready` is sent. Errors: `invalid_data` (not later), `test_clock_advance_too_far` (more than two intervals of the shortest subscription), `test_clock_advancing` (409), `test_clock_internal_failure`.
+         */
+        post: operations["TestClocks_advance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1853,6 +1915,24 @@ export interface components {
              * @example insufficient_balance
              */
             error?: string;
+        };
+        BsSettlementStatusDto: {
+            /**
+             * @description True when your available Bs is settled automatically every 15 minutes.
+             * @example true
+             */
+            enabled: boolean;
+            /**
+             * @description `active` = settling; `no_payout_account` / `payout_account_unverified` = add and verify a payout account; `payout_account_cooling` = destination changed recently; `paused` = paused by VEXPay; `opted_out` = off for your account; `disbursements` = your balance funds disbursements; `test_mode` = never settled in test mode.
+             * @example active
+             * @enum {string}
+             */
+            status: "active" | "no_payout_account" | "payout_account_unverified" | "payout_account_cooling" | "paused" | "opted_out" | "disbursements" | "test_mode";
+            /**
+             * @description Smallest available Bs amount that is settled.
+             * @example 100.00
+             */
+            minimumVes: string;
         };
         PlatformBalanceDto: {
             /** Format: uuid */
@@ -1880,8 +1960,8 @@ export interface components {
             /** @example 8650.00 */
             ledgerNetVes: string;
             /**
-             * @description VES under the 24h balance hold: incoming credits count in `ledgerNetVes` but cannot be paid out until their hold ends. Conversions and seller transfers may still use them.
-             * @example 4500.00
+             * @description VES under a balance hold set by VEXPay (none by default, see `balanceHoldHours`): such credits count in `ledgerNetVes` but cannot be paid out until their hold ends. Conversions and seller transfers may still use them.
+             * @example 0.00
              */
             heldVes?: string;
             /**
@@ -1891,10 +1971,17 @@ export interface components {
              */
             nextReleaseAt?: string | null;
             /**
-             * @description What payouts can spend: ledgerNetVes − reserveVes − heldVes (seller obligations already deducted via SELLER_TRANSFER).
+             * @description What payouts and automatic settlement can spend: ledgerNetVes − reserveVes − heldVes − unconfirmedVes (seller obligations already deducted via SELLER_TRANSFER).
              * @example 4150.00
              */
             availableVes: string;
+            /**
+             * @description Bs from payments the bank has not confirmed yet: they count in `ledgerNetVes` but cannot be paid out or settled until the bank confirms them. Conversions and seller transfers may still use them.
+             * @example 4500.00
+             */
+            unconfirmedVes?: string;
+            /** @description Automatic Bs settlement to your verified payout account. */
+            settlement?: components["schemas"]["BsSettlementStatusDto"];
             /** @example 8650.00 */
             platformAvailableVes: string;
             /**
@@ -1911,8 +1998,8 @@ export interface components {
             /** @example 0.00 */
             feeFixedUsd: string;
             /**
-             * @description Hours each incoming credit is held before payouts can spend it (0 = no hold). Set by VEXPay.
-             * @example 24
+             * @description Hours each incoming credit is held before payouts can spend it (0 = no hold, the default). Set by VEXPay.
+             * @example 0
              */
             balanceHoldHours?: number;
         };
@@ -1980,7 +2067,7 @@ export interface components {
              *       "payment.failed"
              *     ]
              */
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "test_clock.advancing" | "test_clock.ready" | "notification.test")[];
         };
         WebhookEndpointDto: {
             /** Format: uuid */
@@ -1989,7 +2076,7 @@ export interface components {
             tenantId: string;
             /** Format: uri */
             url: string;
-            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "notification.test")[];
+            events: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "test_clock.advancing" | "test_clock.ready" | "notification.test")[];
             isActive: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -2010,7 +2097,7 @@ export interface components {
              *       "payout.completed"
              *     ]
              */
-            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "notification.test")[];
+            events?: ("payment.pending" | "payment.completed" | "payment.failed" | "payment.canceled" | "payment.reversed" | "payment.chargeback" | "payment.chargeback_closed" | "merchant.verified" | "merchant.rejected" | "merchant.deactivated" | "merchant.reactivated" | "merchant.balance.updated" | "merchant.created" | "merchant.activated" | "merchant.updated" | "merchant.kyb_required" | "merchant.restricted" | "merchant.capability.updated" | "merchant.wallet_credit" | "payout.completed" | "payout.failed" | "conversion.created" | "conversion.completed" | "conversion.canceled" | "onward_payout.updated" | "tenant.status_changed" | "tenant.api_key.created" | "tenant.api_key.rotated" | "tenant.api_key.revoked" | "tenant.live_status_changed" | "customer.created" | "customer.updated" | "customer.deleted" | "customer.subscription.created" | "customer.subscription.updated" | "customer.subscription.deleted" | "customer.subscription.trial_will_end" | "customer.subscription.reactivated" | "invoice.created" | "invoice.upcoming" | "invoice.paid" | "invoice.payment_attempt" | "invoice.payment_failed" | "invoice.overdue" | "invoice.voided" | "invoice.marked_uncollectible" | "payment_method.attached" | "payment_method.updated" | "payment_method.detached" | "test_clock.advancing" | "test_clock.ready" | "notification.test")[];
             /** @example true */
             isActive?: boolean;
         };
@@ -2025,15 +2112,15 @@ export interface components {
              */
             payoutId: string;
             /**
-             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit`, funds returned) when rejected.
+             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit` or `rejected_bank_unfunded`, funds returned) when rejected.
              * @enum {string}
              */
             status: "completed" | "pending" | "failed" | "awaiting_approval";
             /**
-             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent).
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
              * @enum {string}
              */
-            holdReason?: "NEW_ACCOUNT_LIMIT";
+            holdReason?: "NEW_ACCOUNT_LIMIT" | "BANK_UNFUNDED";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -2103,15 +2190,15 @@ export interface components {
              */
             payoutId: string;
             /**
-             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit`, funds returned) when rejected.
+             * @description `pending` means the credit is still reconciling (AC00); subscribe to payout webhooks or poll GET /v1/payouts/:id. `awaiting_approval` means the funds are reserved but the payout is held for VEX Pay review (see `holdReason`) and has not been sent; it later becomes `pending`/`completed` when approved or `failed` (`rejected_new_account_limit` or `rejected_bank_unfunded`, funds returned) when rejected.
              * @enum {string}
              */
             status: "completed" | "pending" | "failed" | "awaiting_approval";
             /**
-             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent).
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
              * @enum {string}
              */
-            holdReason?: "NEW_ACCOUNT_LIMIT";
+            holdReason?: "NEW_ACCOUNT_LIMIT" | "BANK_UNFUNDED";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -2806,13 +2893,13 @@ export interface components {
              */
             available: string;
             /**
-             * @description Under the 24h balance hold: credited but not payable until its hold ends, in `currency`.
+             * @description Credited but not payable yet, in `currency`: under a balance hold until it ends, or bought with VES still awaiting bank confirmation until the bank confirms it.
              * @example 0.00
              */
             held?: string;
             /**
              * Format: date-time
-             * @description When the soonest held amount becomes available; null when nothing is held.
+             * @description When the soonest held amount becomes available; null when nothing is held or only amounts awaiting bank confirmation (no set time) are held.
              */
             nextReleaseAt?: string | null;
             /**
@@ -3635,7 +3722,7 @@ export interface components {
         };
         OnwardPayoutStatusDto: {
             /**
-             * @description `waiting_release`: converted, waiting for the 24h balance hold to end before sending (see `sendAfter`).
+             * @description `waiting_release`: converted, waiting before sending until the balance hold ends (see `sendAfter`) or, with `reason: awaiting_bank_confirmation`, until the bank confirms the paid VES.
              * @example completed
              * @enum {string}
              */
@@ -3668,13 +3755,13 @@ export interface components {
             /** @description On-chain hash once the payout completed. */
             txHash?: string;
             /**
-             * @description Why it is held, failed or canceled.
+             * @description Why it is waiting, held, failed or canceled (`awaiting_bank_confirmation` while the bank has not confirmed the paid VES).
              * @example below_payout_minimum
              */
             reason?: string;
             /**
              * Format: date-time
-             * @description `waiting_release` only: when the converted USDT leaves the balance hold and the payout is sent.
+             * @description `waiting_release` only: when the converted USDT leaves the balance hold and the payout is sent. Omitted while waiting for bank confirmation.
              */
             sendAfter?: string;
             /** Format: date-time */
@@ -4533,7 +4620,7 @@ export interface components {
              * @example cs-9f2a4b7c1d3e_secret_k8Jc…
              */
             clientSecret?: string;
-            /** @example https://pay.vexwallet.co/pay/cs-9f2a4b7c1d3e */
+            /** @example https://pay.vexpay.app/pay/cs-9f2a4b7c1d3e */
             url: string;
             /** @example 25.00 */
             amountUsd: string;
@@ -4779,7 +4866,10 @@ export interface components {
             metadata?: {
                 [key: string]: string;
             } | null;
-            /** @description Test clock id (test mode only). Not available yet. */
+            /**
+             * @description Attach the customer to a test clock (test mode only, at most 3 customers per clock). Set on create only.
+             * @example clock_3fd84b2d9ad14f74a2d90f2f56984db5
+             */
             testClock?: string;
         };
         CustomerResponseDto: {
@@ -4797,6 +4887,7 @@ export interface components {
             metadata: {
                 [key: string]: string;
             };
+            /** @description Test clock id (`clock_…`) the customer runs on, or null. */
             testClock: string | null;
             createdAt: string;
             livemode: boolean;
@@ -4829,7 +4920,10 @@ export interface components {
             metadata?: {
                 [key: string]: string;
             } | null;
-            /** @description Test clock id (test mode only). Not available yet. */
+            /**
+             * @description Attach the customer to a test clock (test mode only, at most 3 customers per clock). Set on create only.
+             * @example clock_3fd84b2d9ad14f74a2d90f2f56984db5
+             */
             testClock?: string;
         };
         DeletedObjectResponseDto: {
@@ -5074,6 +5168,45 @@ export interface components {
         PaymentMethodListResponseDto: {
             items: components["schemas"]["PaymentMethodResponseDto"][];
             nextCursor: string | null;
+        };
+        CreateTestClockDto: {
+            /**
+             * @description ISO 8601 time the clock starts at.
+             * @example 2026-01-01T00:00:00.000Z
+             */
+            frozenTime: string;
+            /** @example Dunning test */
+            name?: string | null;
+        };
+        TestClockResponseDto: {
+            /** @example clock_3fd84b2d9ad14f74a2d90f2f56984db5 */
+            id: string;
+            /** @example test_clock */
+            object: string;
+            name: string | null;
+            /** @description The clock's current time. */
+            frozenTime: string;
+            /**
+             * @description advancing while events between the old and new time are being run.
+             * @enum {string}
+             */
+            status: "ready" | "advancing" | "internal_failure";
+            /** @description While advancing: the time the clock is moving to. */
+            targetTime: string | null;
+            createdAt: string;
+            /** @example false */
+            livemode: boolean;
+        };
+        TestClockListResponseDto: {
+            items: components["schemas"]["TestClockResponseDto"][];
+            nextCursor: string | null;
+        };
+        AdvanceTestClockDto: {
+            /**
+             * @description ISO 8601 time to move to: later than the current one, and at most two intervals of the shortest subscription on the clock ahead.
+             * @example 2026-01-05T00:00:00.000Z
+             */
+            frozenTime: string;
         };
     };
     responses: never;
@@ -5618,6 +5751,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorDto"];
                 };
             };
+            /** @description `insufficient_balance` (body: `availableVes`, `requestedVes`, `heldVes`, `nextReleaseAt`, `unconfirmedVes`, `maxPayoutVes`) or `insufficient_merchant_balance` (body: `availableVes`, `requestedVes`, `maxPayoutVes`) with `fromMerchantBalance`, `fee_exceeds_amount`, and other business rules. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
             /** @description Client error. */
             "4XX": {
                 headers: {
@@ -5701,6 +5843,15 @@ export interface operations {
             };
             /** @description external_ref_conflict when the same key is reused with a different payload. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description `insufficient_balance` (body: `availableVes`, `requestedVes`, `heldVes`, `nextReleaseAt`, `unconfirmedVes`, `maxPayoutVes`) or `insufficient_merchant_balance` (body: `availableVes`, `requestedVes`, `maxPayoutVes`) with `fromMerchantBalance`, `fee_exceeds_amount`, and other business rules. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -14016,6 +14167,391 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    TestClocks_list: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestClockListResponseDto"];
+                };
+            };
+            /** @description Validation failure, or test_mode_only on a live-mode tenant. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    TestClocks_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTestClockDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestClockResponseDto"];
+                };
+            };
+            /** @description Validation failure, or test_mode_only on a live-mode tenant. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    TestClocks_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestClockResponseDto"];
+                };
+            };
+            /** @description Validation failure, or test_mode_only on a live-mode tenant. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    TestClocks_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeletedObjectResponseDto"];
+                };
+            };
+            /** @description Validation failure, or test_mode_only on a live-mode tenant. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description test_clock_advancing */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    TestClocks_advance: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceTestClockDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TestClockResponseDto"];
+                };
+            };
+            /** @description Validation failure, or test_mode_only on a live-mode tenant. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing or invalid tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description test_clock_advancing */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

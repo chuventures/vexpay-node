@@ -15,6 +15,7 @@ import {
   Prices,
   SetupSessions,
   Subscriptions,
+  TestClocks,
 } from './resources/billing';
 import { Checkout, PaymentLinks, Products } from './resources/commerce';
 import { Conversions } from './resources/conversions';
@@ -24,10 +25,10 @@ import { Merchants } from './resources/merchants';
 import { Payments } from './resources/payments';
 import { Webhooks } from './webhooks';
 
-export const DEFAULT_BASE_URL = 'https://api.pay.vexwallet.co';
+export const DEFAULT_BASE_URL = 'https://api.vexpay.app';
 
 export interface VexPayOptions {
-  /** API origin. Defaults to production (`https://api.pay.vexwallet.co`). */
+  /** API origin. Defaults to production (`https://api.vexpay.app`). */
   baseUrl?: string;
   /** Per-attempt timeout. Default 30 000 ms. */
   timeoutMs?: number;
@@ -69,6 +70,8 @@ export class VexPay {
   readonly setupSessions: SetupSessions;
   /** Billing: domiciliación payment methods (bolívar methods your account takes: `payments.methods()`). */
   readonly paymentMethods: PaymentMethods;
+  /** Billing, test mode only: simulated time for trials, renewals and dunning. */
+  readonly testClocks: TestClocks;
   /** Offline helpers: `constructEvent` verifies deliveries; no API calls. */
   readonly webhooks = new Webhooks();
 
@@ -111,5 +114,6 @@ export class VexPay {
     this.invoices = new Invoices(this.http);
     this.setupSessions = new SetupSessions(this.http);
     this.paymentMethods = new PaymentMethods(this.http);
+    this.testClocks = new TestClocks(this.http);
   }
 }

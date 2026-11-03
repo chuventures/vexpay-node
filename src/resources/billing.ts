@@ -153,3 +153,40 @@ export class PaymentMethods extends APIResource {
     return this.call('PaymentMethods_detach', { path: { id } }, options);
   }
 }
+
+/**
+ * Test mode only: freeze time for up to 3 customers and move it forward to see trials,
+ * renewals, dunning and cancellations happen in minutes. Attach a customer with
+ * `customers.create({ testClock })`.
+ */
+export class TestClocks extends APIResource {
+  /** `frozenTime` is an ISO 8601 time. */
+  create(params: RequestBody<'TestClocks_create'>, options?: RequestOptions) {
+    return this.call('TestClocks_create', { body: params }, options);
+  }
+
+  /** Await for one page, or `for await` over every clock (newest first). */
+  list(params: QueryParams<'TestClocks_list'> = {}, options?: RequestOptions) {
+    return new PagePromise(
+      (cursor) => this.call('TestClocks_list', { query: { ...params, cursor } }, options),
+      params.cursor,
+    );
+  }
+
+  retrieve(id: string, options?: RequestOptions) {
+    return this.call('TestClocks_retrieve', { path: { id } }, options);
+  }
+
+  /** Deletes the clock with its customers, subscriptions, invoices and payment methods. */
+  delete(id: string, options?: RequestOptions) {
+    return this.call('TestClocks_remove', { path: { id } }, options);
+  }
+
+  /**
+   * Move the clock forward (at most two intervals of its shortest subscription). It returns at
+   * once with `status: "advancing"`; poll `retrieve` or wait for `test_clock.ready`.
+   */
+  advance(id: string, params: RequestBody<'TestClocks_advance'>, options?: RequestOptions) {
+    return this.call('TestClocks_advance', { path: { id }, body: params }, options);
+  }
+}

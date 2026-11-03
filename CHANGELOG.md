@@ -1,5 +1,15 @@
 # @vexpay/node
 
+## 0.15.0
+
+### Minor Changes
+
+- The default API origin is now `https://api.vexpay.app`. The earlier host `https://api.pay.vexwallet.co` keeps working with no end date; pass it as `baseUrl` to keep using it.
+
+### Patch Changes
+
+- Payout `holdReason` adds `BANK_UNFUNDED` (held for VEX Pay review; a rejection fails with `rejected_bank_unfunded` and returns the funds). A Bs payout is sent as one bank transfer, so 422 `insufficient_balance` / `insufficient_merchant_balance` now carry `maxPayoutVes`, the largest amount one payout can take; it can be lower than `availableVes`.
+
 ## 0.14.0
 
 ### Minor Changes

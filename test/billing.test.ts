@@ -8,6 +8,7 @@ const SUBSCRIPTION = { id: 'sub_1', object: 'subscription', customer: 'cus_1', s
 const INVOICE = { id: 'in_1', object: 'invoice', status: 'open', customer: 'cus_1', subscription: 'sub_1' };
 const SETUP = { id: 'seti_1', object: 'setup_session', customer: 'cus_1', status: 'open', url: 'https://pay.example/setup/seti_1' };
 const METHOD = { id: 'pm_1', object: 'payment_method', customer: 'cus_1', status: 'active' };
+const CLOCK = { id: 'clock_1', object: 'test_clock', name: null, frozenTime: '2026-01-01T00:00:00.000Z', status: 'ready', livemode: false };
 
 /** Two pages for every list: the first points at `c2`, the second ends. */
 function page(item: { id: string }, url: string) {
@@ -28,6 +29,10 @@ describe('billing', () => {
       if (req.method === 'GET' && path === '/v1/prices') return { status: 200, body: page(PRICE, req.url) };
       if (req.method === 'GET' && path === '/v1/subscriptions') return { status: 200, body: page(SUBSCRIPTION, req.url) };
       if (req.method === 'GET' && path === '/v1/invoices') return { status: 200, body: page(INVOICE, req.url) };
+      if (req.method === 'GET' && path === '/v1/test-clocks') return { status: 200, body: page(CLOCK, req.url) };
+      if (req.method === 'DELETE' && path.startsWith('/v1/test-clocks/')) return { status: 200, body: { id: 'clock_1', deleted: true } };
+      if (path.endsWith('/advance')) return { status: 200, body: { ...CLOCK, status: 'advancing', targetTime: '2026-01-05T00:00:00.000Z' } };
+      if (path.startsWith('/v1/test-clocks')) return { status: req.method === 'POST' ? 201 : 200, body: CLOCK };
       if (req.method === 'DELETE' && path.startsWith('/v1/customers/')) return { status: 200, body: { id: 'cus_1', deleted: true } };
       if (req.method === 'DELETE' && path.startsWith('/v1/subscriptions/')) return { status: 200, body: { ...SUBSCRIPTION, status: 'canceled' } };
       if (req.method === 'DELETE' && path.startsWith('/v1/payment-methods/')) return { status: 200, body: { ...METHOD, status: 'detached' } };
@@ -174,6 +179,30 @@ describe('billing', () => {
     expect(last()).toMatchObject({ method: 'DELETE', url: '/v1/payment-methods/pm_1' });
   });
 
+  it('creates, lists, retrieves, advances and deletes test clocks', async () => {
+    const clock = await vexpay.testClocks.create({ frozenTime: '2026-01-01T00:00:00.000Z', name: 'Dunning' });
+    expect(clock.id).toBe('clock_1');
+    expect(last()).toMatchObject({ method: 'POST', url: '/v1/test-clocks', body: { frozenTime: '2026-01-01T00:00:00.000Z', name: 'Dunning' } });
+    expect(last().headers['idempotency-key']).toBeTruthy();
+
+    const ids = (await vexpay.testClocks.list().autoPagingToArray()).map((c) => c.id);
+    expect(ids).toEqual(['clock_1', 'clock_1_b']);
+    expect(last().url).toBe('/v1/test-clocks?cursor=c2');
+
+    await vexpay.testClocks.retrieve('clock_1');
+    expect(last()).toMatchObject({ method: 'GET', url: '/v1/test-clocks/clock_1' });
+
+    const advancing = await vexpay.testClocks.advance('clock_1', { frozenTime: '2026-01-05T00:00:00.000Z' });
+    expect(advancing.status).toBe('advancing');
+    expect(last()).toMatchObject({ method: 'POST', url: '/v1/test-clocks/clock_1/advance', body: { frozenTime: '2026-01-05T00:00:00.000Z' } });
+
+    expect(await vexpay.testClocks.delete('clock_1')).toEqual({ id: 'clock_1', deleted: true });
+    expect(last()).toMatchObject({ method: 'DELETE', url: '/v1/test-clocks/clock_1' });
+
+    await vexpay.customers.create({ email: 'clock@example.com', testClock: 'clock_1' });
+    expect(last()).toMatchObject({ method: 'POST', url: '/v1/customers', body: { testClock: 'clock_1' } });
+  });
+
   it('keeps payments.methods() on the bolívar method list', async () => {
     await vexpay.payments.methods();
     expect(last()).toMatchObject({ method: 'GET', url: '/v1/payment-methods' });
@@ -190,5 +219,8 @@ describe('typed billing resources', () => {
     expectTypeOf(vexpay.invoices.pay).returns.resolves.toEqualTypeOf<Schemas['InvoiceResponseDto']>();
     expectTypeOf(vexpay.setupSessions.create).returns.resolves.toEqualTypeOf<Schemas['SetupSessionResponseDto']>();
     expectTypeOf(vexpay.paymentMethods.detach).returns.resolves.toEqualTypeOf<Schemas['PaymentMethodResponseDto']>();
+    expectTypeOf(vexpay.testClocks.create).parameter(0).toEqualTypeOf<Schemas['CreateTestClockDto']>();
+    expectTypeOf(vexpay.testClocks.advance).returns.resolves.toEqualTypeOf<Schemas['TestClockResponseDto']>();
+    expectTypeOf(vexpay.testClocks.delete).returns.resolves.toEqualTypeOf<Schemas['DeletedObjectResponseDto']>();
   });
 });

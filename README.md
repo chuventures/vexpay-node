@@ -1,6 +1,6 @@
 # VEXPay Node.js SDK
 
-The official Node.js / TypeScript library for the [VEXPay](https://vexwallet.co/vexpay) API: accept Venezuelan payments (Pago Móvil C2P, cards, débito inmediato), pay out to merchants, create checkout sessions, and verify signed webhooks.
+The official Node.js / TypeScript library for the [VEXPay](https://vexpay.app) API: accept Venezuelan payments (Pago Móvil C2P, cards, débito inmediato), pay out to merchants, create checkout sessions, and verify signed webhooks.
 
 - Fully typed from the VEXPay OpenAPI contract
 - Safe retries: every `POST` carries an `Idempotency-Key`, so a retried charge never charges twice
@@ -278,7 +278,7 @@ await vexpay.subscriptions.update(subscription.id, { cancelAtPeriodEnd: true });
 
 ## Testing card payments
 
-With a test API key, VPOS test cards return a fixed outcome without reaching the bank: `4242424242424242` succeeds, `4000000000009995` is declined with `G51` (insufficient funds), `4000000000000259` completes and is then charged back, and more. A decline fails exactly like a live one (422, the bank code in `code` and `failureCode`, a `payment.failed` webhook). With a live key these numbers are refused with 400 `test_card_in_live_mode`. Full list: [test cards](https://docs.pay.vexwallet.co/vpos#test-card).
+With a test API key, VPOS test cards return a fixed outcome without reaching the bank: `4242424242424242` succeeds, `4000000000009995` is declined with `G51` (insufficient funds), `4000000000000259` completes and is then charged back, and more. A decline fails exactly like a live one (422, the bank code in `code` and `failureCode`, a `payment.failed` webhook). With a live key these numbers are refused with 400 `test_card_in_live_mode`. Full list: [test cards](https://docs.vexpay.app/vpos#test-card).
 
 ## Webhooks
 
@@ -475,7 +475,7 @@ console.log(recentPayouts.length);
 import VexPay from '@vexpay/node';
 
 const vexpay = new VexPay(process.env.VEXPAY_API_KEY!, {
-  baseUrl: 'http://localhost:3010', // default: https://api.pay.vexwallet.co
+  baseUrl: 'http://localhost:3010', // default: https://api.vexpay.app
   timeoutMs: 30_000,
   maxNetworkRetries: 2,
 });
@@ -541,7 +541,7 @@ console.log(describe, {} as NewPayout, {} as Session);
 | `paymentMethods` | `retrieve`, `detach` |
 | `webhooks` | `constructEvent`, `generateTestHeader` (offline) |
 
-Full API reference: [docs](https://pay.vexwallet.co/docs) · OpenAPI: `/openapi.json`.
+Full API reference: [docs](https://docs.vexpay.app) · OpenAPI: `/openapi.json`.
 
 ## License
 
