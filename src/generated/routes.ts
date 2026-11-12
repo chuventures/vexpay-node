@@ -39,6 +39,8 @@ export const ROUTES = {
   Invoices_pay: { method: 'POST', path: '/v1/invoices/{id}/pay' },
   Invoices_retrieve: { method: 'GET', path: '/v1/invoices/{id}' },
   Invoices_void: { method: 'POST', path: '/v1/invoices/{id}/void' },
+  MarketplaceSettings_get: { method: 'GET', path: '/v1/marketplace/settings' },
+  MarketplaceSettings_update: { method: 'PATCH', path: '/v1/marketplace/settings' },
   Merchants_addPayoutMethod: { method: 'POST', path: '/v1/merchants/{id}/payout-methods' },
   Merchants_confirmVerify: { method: 'POST', path: '/v1/merchants/{id}/verify' },
   Merchants_confirmVerifyMethod: { method: 'POST', path: '/v1/merchants/{id}/payout-methods/{methodId}/verify' },

@@ -45,8 +45,21 @@ export class PayoutMethods extends APIResource {
   }
 }
 
+/** Marketplace comercio auto-payout: the default for new merchants and the payout minimum. */
+export class MarketplaceSettings extends APIResource {
+  retrieve(options?: RequestOptions) {
+    return this.call('MarketplaceSettings_get', {}, options);
+  }
+
+  /** `merchantAutoPayoutDefault` and/or `merchantAutoPayoutMinUsd` (USD; null clears it). */
+  update(params: RequestBody<'MarketplaceSettings_update'>, options?: RequestOptions) {
+    return this.call('MarketplaceSettings_update', { body: params }, options);
+  }
+}
+
 export class Merchants extends APIResource {
   readonly payoutMethods = new PayoutMethods(this.http);
+  readonly marketplaceSettings = new MarketplaceSettings(this.http);
 
   /** `externalRef` is required and is the idempotency key for merchant creation. */
   create(params: RequestBody<'Merchants_create'>, options?: RequestOptions) {

@@ -1,7 +1,7 @@
 {
   "name": "@vexpay/node",
-  "version": "0.15.0",
-  "description": "Official Node.js/TypeScript SDK for the VEXPay API \u2014 Venezuelan payments (Pago M\u00f3vil C2P, cards, d\u00e9bito inmediato), payouts, checkout sessions, and signed webhooks.",
+  "version": "0.17.0",
+  "description": "Official Node.js/TypeScript SDK for the VEX Pay API \u2014 Venezuelan payments (Pago M\u00f3vil C2P, cards, d\u00e9bito inmediato), payouts, checkout sessions, and signed webhooks.",
   "license": "MIT",
   "keywords": [
     "vexpay",
@@ -12,7 +12,11 @@
     "bolivares",
     "sdk"
   ],
-  "homepage": "https://github.com/chuventures/vexpay-node#readme",
+  "homepage": "https://docs.vexpay.app/node-sdk",
+  "author": {
+    "name": "VEX Pay",
+    "url": "https://vexpay.app"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/chuventures/vexpay-node.git"

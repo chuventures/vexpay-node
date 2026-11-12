@@ -78,7 +78,7 @@ export class VexPay {
   constructor(apiKey: string, options: VexPayOptions = {}) {
     if (typeof apiKey !== 'string' || apiKey.trim() === '') {
       throw new VexPayConfigurationError(
-        'A VEXPay API key is required: new VexPay(process.env.VEXPAY_API_KEY).',
+        'A VEX Pay API key is required: new VexPay(process.env.VEXPAY_API_KEY).',
       );
     }
     const fetchImpl = options.fetch ?? globalThis.fetch;

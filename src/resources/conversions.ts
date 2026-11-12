@@ -28,7 +28,7 @@ export class ConversionSettings extends APIResource {
 
 /**
  * Convert available VES or COP into your USDT balance. Accepting a quote debits the source at once
- * (`conversion.created`); the conversion is `PENDING` until VEXPay delivers the USDT
+ * (`conversion.created`); the conversion is `PENDING` until VEX Pay delivers the USDT
  * (`conversion.completed`). Enabled per account.
  */
 export class Conversions extends APIResource {

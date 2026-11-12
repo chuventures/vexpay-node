@@ -103,7 +103,7 @@ export class Payouts extends APIResource {
   }
 }
 
-/** The account your own VEXPay earnings are paid out to. */
+/** The account your own VEX Pay earnings are paid out to. */
 export class TenantPayoutAccount extends APIResource {
   retrieve(options?: RequestOptions) {
     return this.call('TenantPayoutAccount_get', {}, options);
@@ -128,7 +128,7 @@ export class TenantPayoutAccount extends APIResource {
   }
 }
 
-/** Where VEXPay delivers signed webhooks. */
+/** Where VEX Pay delivers signed webhooks. */
 export class WebhookEndpoints extends APIResource {
   /** The response includes the signing `secret` — store it to verify deliveries. */
   create(params: RequestBody<'Webhooks_createWebhook'>, options?: RequestOptions) {

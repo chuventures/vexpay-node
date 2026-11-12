@@ -40,7 +40,7 @@ export class VexPayConflictError extends VexPayError {}
 /** 429 — too many requests. Retried automatically before surfacing. */
 export class VexPayRateLimitError extends VexPayError {}
 
-/** 5xx — VEXPay or an upstream bank failed. Retried automatically before surfacing. */
+/** 5xx — VEX Pay or an upstream bank failed. Retried automatically before surfacing. */
 export class VexPayAPIError extends VexPayError {}
 
 /** The request never got an HTTP answer (DNS, refused, reset). */
@@ -62,7 +62,7 @@ function messageFrom(body: unknown, status: number): string {
     if (typeof error === 'string' && error) return error;
   }
   if (typeof body === 'string' && body) return body;
-  return `VEXPay API responded with HTTP ${status}`;
+  return `VEX Pay API responded with HTTP ${status}`;
 }
 
 /** Maps an HTTP error response to the matching error class. */

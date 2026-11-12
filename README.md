@@ -1,8 +1,8 @@
-# VEXPay Node.js SDK
+# VEX Pay Node.js SDK
 
-The official Node.js / TypeScript library for the [VEXPay](https://vexpay.app) API: accept Venezuelan payments (Pago Móvil C2P, cards, débito inmediato), pay out to merchants, create checkout sessions, and verify signed webhooks.
+The official Node.js / TypeScript library for the [VEX Pay](https://vexpay.app) API: accept Venezuelan payments (Pago Móvil C2P, cards, débito inmediato), pay out to merchants, create checkout sessions, and verify signed webhooks.
 
-- Fully typed from the VEXPay OpenAPI contract
+- Fully typed from the VEX Pay OpenAPI contract
 - Safe retries: every `POST` carries an `Idempotency-Key`, so a retried charge never charges twice
 - Auto-pagination with `for await`
 - Webhook signature verification with replay protection
@@ -61,7 +61,7 @@ console.log(payment.status); // "COMPLETED" or "PENDING" — confirm with the pa
 
 ## Checkout sessions (hosted or embedded)
 
-Let VEXPay collect the payment details. Redirect the buyer to `url`, or embed the checkout on your own site with [`@vexpay/js`](https://www.npmjs.com/package/@vexpay/js) and the one-time `clientSecret`.
+Let VEX Pay collect the payment details. Redirect the buyer to `url`, or embed the checkout on your own site with [`@vexpay/js`](https://www.npmjs.com/package/@vexpay/js) and the one-time `clientSecret`.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -91,7 +91,7 @@ The hosted page lets the buyer pick the currency — bolívares, stablecoins or 
 
 ## USDT
 
-USDT settles in USDT, into your VEXPay USDT balance (never converted to VES). It must be enabled on your account — otherwise these calls fail with `method_not_allowed` (403). Pay-ins cost 2.5 % + 0.50 USDT; payouts cost the network fee listed by `crypto.networks.list()`.
+USDT settles in USDT, into your VEX Pay USDT balance (never converted to VES). It must be enabled on your account — otherwise these calls fail with `method_not_allowed` (403). Pay-ins cost 2.5 % + 0.50 USDT; payouts cost the network fee listed by `crypto.networks.list()`.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -151,7 +151,7 @@ Responses and events include `currency`, `amount` and `fee` for both coins (`amo
 
 ## Convert VES or COP to USDT
 
-Turn available VES or Colombian pesos into your USDT balance. A quote locks the rate (market USDT rate in that currency plus your spread) for 60 seconds; accepting it debits the source at once (`conversion.created`) and returns a `PENDING` conversion. VEXPay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES or COP returned). Conversions are on for every account that has USDT enabled (COP also needs COP enabled) — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately. COP amounts are whole pesos.
+Turn available VES or Colombian pesos into your USDT balance. A quote locks the rate (market USDT rate in that currency plus your spread) for 60 seconds; accepting it debits the source at once (`conversion.created`) and returns a `PENDING` conversion. VEX Pay then delivers the USDT and sends `conversion.completed` (or `conversion.canceled`, with the VES or COP returned). Conversions are on for every account that has USDT enabled (COP also needs COP enabled) — otherwise the calls fail with `conversions_not_enabled` (403). In test mode they complete immediately. COP amounts are whole pesos.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -241,7 +241,7 @@ const { availableCop } = await vexpay.cop.balance.retrieve();
 
 ## Subscriptions
 
-Bill a customer on a recurring USD price. Each period VEXPay issues an invoice; with `send_invoice` (default) the customer pays it on a hosted page (`hostedInvoiceUrl`), with `charge_automatically` VEXPay charges their domiciliación. Listen for `invoice.paid`, `invoice.payment_failed` and `customer.subscription.*` webhooks.
+Bill a customer on a recurring USD price. Each period VEX Pay issues an invoice; with `send_invoice` (default) the customer pays it on a hosted page (`hostedInvoiceUrl`), with `charge_automatically` VEX Pay charges their domiciliación. Listen for `invoice.paid`, `invoice.payment_failed` and `customer.subscription.*` webhooks.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -274,7 +274,7 @@ for await (const method of vexpay.customers.paymentMethods.list(customer.id)) {
 await vexpay.subscriptions.update(subscription.id, { cancelAtPeriodEnd: true });
 ```
 
-`subscriptions.cancel(id)` cancels at once and voids its open invoices. On an open invoice, `invoices.void(id)`, `invoices.markUncollectible(id)` (stays payable) and `invoices.pay(id, { paidOutOfBand: true })` (paid outside VEXPay; no money moves). `paymentMethods.detach(id)` stops a domiciliación from being charged again.
+`subscriptions.cancel(id)` cancels at once and voids its open invoices. On an open invoice, `invoices.void(id)`, `invoices.markUncollectible(id)` (stays payable) and `invoices.pay(id, { paidOutOfBand: true })` (paid outside VEX Pay; no money moves). `paymentMethods.detach(id)` stops a domiciliación from being charged again.
 
 ## Testing card payments
 
@@ -282,7 +282,7 @@ With a test API key, VPOS test cards return a fixed outcome without reaching the
 
 ## Webhooks
 
-VEXPay signs every delivery with a `VexPay-Signature` header. Verify it with the **raw** request body — parsing and re-serializing JSON changes the bytes and breaks the signature.
+VEX Pay signs every delivery with a `VexPay-Signature` header. Verify it with the **raw** request body — parsing and re-serializing JSON changes the bytes and breaks the signature.
 
 ```ts
 import VexPay from '@vexpay/node';
@@ -403,7 +403,7 @@ try {
 
 ## Retries and idempotency
 
-The SDK retries connection errors, timeouts, `429`, `5xx`, and `409 idempotency_request_in_progress` up to `maxNetworkRetries` times (default 2) with exponential backoff, honouring `Retry-After`. Every `POST` gets a random `Idempotency-Key` that stays the same across its retries, so VEXPay executes it at most once. Supply your own key to make retries safe across process restarts too:
+The SDK retries connection errors, timeouts, `429`, `5xx`, and `409 idempotency_request_in_progress` up to `maxNetworkRetries` times (default 2) with exponential backoff, honouring `Retry-After`. Every `POST` gets a random `Idempotency-Key` that stays the same across its retries, so VEX Pay executes it at most once. Supply your own key to make retries safe across process restarts too:
 
 ```ts
 import VexPay from '@vexpay/node';

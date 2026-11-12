@@ -152,11 +152,11 @@ export class HttpClient {
       return await this.config.fetch(url, { ...init, signal: controller.signal });
     } catch (caught) {
       if (timedOut) {
-        throw new VexPayTimeoutError(`Request to VEXPay timed out after ${timeoutMs}ms`);
+        throw new VexPayTimeoutError(`Request to VEX Pay timed out after ${timeoutMs}ms`);
       }
       if (signal?.aborted) throw caught;
       const reason = caught instanceof Error ? caught.message : String(caught);
-      throw new VexPayConnectionError(`Could not reach VEXPay: ${reason}`);
+      throw new VexPayConnectionError(`Could not reach VEX Pay: ${reason}`);
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener('abort', onAbort);

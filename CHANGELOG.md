@@ -1,5 +1,22 @@
 # @vexpay/node
 
+## 0.17.0
+
+### Minor Changes
+
+- 3106c17: Marketplace: `splits` (up to 10 shares: `merchantId`, `amount`, optional `applicationFeeVes` / `applicationFeePercent`, `reference`) on `payments.debit.execute`, `payments.c2p.request` / `execute`, `payments.pagoMovil.verify` and `payments.vpos.create`. Payments read back `splits[]` with each share's commission, VEX Pay fee and net. New `merchants.marketplaceSettings.retrieve()` / `update()` for the comercio auto-payout default and minimum; `merchants.create` takes an optional `autoPayoutEnabled`. Merchant transactions and statements carry `splitReference` on split credits.
+
+## 0.16.0
+
+### Minor Changes
+
+- Payout account: `tenantPayoutAccount.upsert` takes `type: 'bank_account'` with `cuenta` (20 digits), `cedula` and `titular` to receive instant credits on a checking account; `banco` is then read from the account number. Omitting `type` keeps today's Pago Móvil account. Responses add `type`, `holderName` and the masked `destination`. Payout webhooks for checking-account credits carry `channel: 'BANK_ACCOUNT'` and a masked `destination`.
+
+### Patch Changes
+
+- Package metadata: the npm homepage now points at the VEX Pay developer docs (https://docs.vexpay.app/node-sdk) and the package lists VEX Pay (https://vexpay.app) as its author. No code changes.
+- Error messages and doc comments write the brand as "VEX Pay" (was "VEXPay").
+
 ## 0.15.0
 
 ### Minor Changes

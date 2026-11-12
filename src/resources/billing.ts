@@ -124,7 +124,7 @@ export class Invoices extends APIResource {
     return this.call('Invoices_markUncollectible', { path: { id } }, options);
   }
 
-  /** Record an open invoice as paid outside VEXPay (`paidOutOfBand: true`); no money moves. */
+  /** Record an open invoice as paid outside VEX Pay (`paidOutOfBand: true`); no money moves. */
   pay(id: string, params: RequestBody<'Invoices_pay'>, options?: RequestOptions) {
     return this.call('Invoices_pay', { path: { id }, body: params }, options);
   }

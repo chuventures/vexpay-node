@@ -4,46 +4,6 @@
  */
 
 export interface paths {
-    "/v1/balance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get platform balance breakdown
-         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes. Bs from a payment becomes available once the bank confirms it (`unconfirmedVes` until then); available Bs is settled automatically to your verified payout account every 15 minutes (`settlement`).
-         */
-        get: operations["Balance_getBalance"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/balance/transactions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List balance movements
-         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes`, `heldVes` and `unconfirmedVes`, `availableVes`), so you can reconcile your own ledger automatically. Movements under a balance hold carry `availableAt`. Automatic settlements are payouts whose `externalRef` starts with `auto_settle_`. Page with `cursor`.
-         */
-        get: operations["Balance_listTransactions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/webhooks": {
         parameters: {
             query?: never;
@@ -87,6 +47,46 @@ export interface paths {
          * @description Update url, subscribed events, and/or active status. Providing events replaces the full subscription list. The signing secret cannot be changed.
          */
         patch: operations["Webhooks_updateWebhook"];
+        trace?: never;
+    };
+    "/v1/balance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get platform balance breakdown
+         * @description Returns tenant ledger totals plus seller obligations (pending + available) and platformAvailableVes. Bs from a payment becomes available once the bank confirms it (`unconfirmedVes` until then); available Bs is settled automatically to your verified payout account every 15 minutes (`settlement`).
+         */
+        get: operations["Balance_getBalance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/balance/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List balance movements
+         * @description Every movement in your VES balance, newest first: payments, fees, payouts, reversals, card chargebacks, adjustments, seller transfers and conversions. The sum of `amountVes` over all movements equals `ledgerNetVes` from GET /v1/balance (and minus `reserveVes`, `heldVes` and `unconfirmedVes`, `availableVes`), so you can reconcile your own ledger automatically. Movements under a balance hold carry `availableAt`. Automatic settlements are payouts whose `externalRef` starts with `auto_settle_`. Page with `cursor`.
+         */
+        get: operations["Balance_listTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/payouts": {
@@ -462,7 +462,7 @@ export interface paths {
         };
         /**
          * Get a stablecoin balance
-         * @description Amount available for payouts and amount reserved by in-flight payouts, in one stablecoin (`currency`, default USDT), from the VEXPay ledger. USDT and USDC balances are separate.
+         * @description Amount available for payouts and amount reserved by in-flight payouts, in one stablecoin (`currency`, default USDT), from the VEX Pay ledger. USDT and USDC balances are separate.
          */
         get: operations["Crypto_getBalance"];
         put?: never;
@@ -564,7 +564,7 @@ export interface paths {
         put?: never;
         /**
          * Send a stablecoin to an external address
-         * @description Debits amount + fee from your balance of `currency` (default USDT); USDC payouts never draw on USDT and vice versa. Payouts within your limits are sent automatically; larger ones wait for review. Completion arrives as `payout.completed` (with `txHash`) or `payout.failed` (refunded). A payout to one of your own deposit addresses settles instantly inside VEXPay with no network fee.
+         * @description Debits amount + fee from your balance of `currency` (default USDT); USDC payouts never draw on USDT and vice versa. Payouts within your limits are sent automatically; larger ones wait for review. Completion arrives as `payout.completed` (with `txHash`) or `payout.failed` (refunded). A payout to one of your own deposit addresses settles instantly inside VEX Pay with no network fee.
          */
         post: operations["Crypto_createPayout"];
         delete?: never;
@@ -743,7 +743,7 @@ export interface paths {
         head?: never;
         /**
          * Update auto-convert
-         * @description Set the share (0–100, whole number; 0 = off) of each completed COP pay-in that is converted to USDT automatically. Applies to pay-ins completed after the change. Spreads, minimums and caps can only be changed by VEXPay.
+         * @description Set the share (0–100, whole number; 0 = off) of each completed COP pay-in that is converted to USDT automatically. Applies to pay-ins completed after the change. Spreads, minimums and caps can only be changed by VEX Pay.
          */
         patch: operations["ConversionSettings_update"];
         trace?: never;
@@ -783,7 +783,7 @@ export interface paths {
         put?: never;
         /**
          * Convert VES or COP to USDT
-         * @description Accepts a quote. The VES or COP is debited from your available balance immediately (`conversion.created`) and the conversion is `PENDING` until VEXPay delivers the USDT to your USDT balance (`conversion.completed`). A pending conversion can be canceled; if VEXPay cannot fulfil it, it is canceled and the amount is returned (`conversion.canceled`). In test mode conversions complete immediately. Send an `Idempotency-Key` header to retry safely.
+         * @description Accepts a quote. The VES or COP is debited from your available balance immediately (`conversion.created`) and the conversion is `PENDING` until VEX Pay delivers the USDT to your USDT balance (`conversion.completed`). A pending conversion can be canceled; if VEX Pay cannot fulfil it, it is canceled and the amount is returned (`conversion.canceled`). In test mode conversions complete immediately. Send an `Idempotency-Key` header to retry safely.
          */
         post: operations["Conversions_create"];
         delete?: never;
@@ -880,7 +880,7 @@ export interface paths {
         put?: never;
         /**
          * Create a pending C2P payment intent and request bank OTP when supported
-         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. When the routed bank supports it, VEXPay also asks the payer bank to SMS a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p. A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine.
+         * @description Creates a PENDING intent. When externalRef is provided, any other PENDING C2P intent for the same tenant + externalRef is canceled (superseded) and payment.canceled is fired. Pending C2P intents expire after 15 minutes. When the routed bank supports it, VEX Pay also asks the payer bank to SMS a token to the customer (`otpRequested: true`). Collect that token, then execute with POST /v1/payments/c2p. A new charge whose `externalRef` already has a COMPLETED payment for this tenant is refused with 409 `external_ref_already_paid` (body: `code` EXTERNAL_REF_ALREADY_PAID, `paymentId` of the paid payment, `externalRef`). Retries after FAILED / CANCELED / REVERSED / expired are allowed; repeated amounts are fine.
          */
         post: operations["Payments_requestC2p"];
         delete?: never;
@@ -980,7 +980,7 @@ export interface paths {
         put?: never;
         /**
          * Verify a customer-originated Pago Móvil transfer
-         * @description Matches a customer-supplied bank `reference` (and optional `dateMovement` YYYY-MM-DD) against bank movements for the quoted USD amount. Returns PaymentReceiptDto when found. Depending on the receiving bank, confirmation is a live query or the bank's own notification to VEXPay — right after a transfer, a not-found can resolve within seconds, so retry with backoff.
+         * @description Matches a customer-supplied bank `reference` (and optional `dateMovement` YYYY-MM-DD) against bank movements for the quoted USD amount. Returns PaymentReceiptDto when found. Depending on the receiving bank, confirmation is a live query or the bank's own notification to VEX Pay — right after a transfer, a not-found can resolve within seconds, so retry with backoff.
          */
         post: operations["Payments_verifyPagoMovil"];
         delete?: never;
@@ -1345,6 +1345,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/marketplace/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get marketplace settings
+         * @description The auto-payout default for new merchants and the minimum an automatic merchant payout sends.
+         */
+        get: operations["MarketplaceSettings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update marketplace settings
+         * @description Set `merchantAutoPayoutDefault` and/or `merchantAutoPayoutMinUsd`. The default applies to merchants created afterwards; existing merchants keep their `autoPayoutEnabled`. The minimum applies from the next 15-minute cycle.
+         */
+        patch: operations["MarketplaceSettings_update"];
+        trace?: never;
+    };
+    "/v1/notifications/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test event to subscribed webhook endpoints
+         * @description Fires a `notification.test` event to every active webhook endpoint subscribed to that event (or all events, depending on your subscription list). Use this to validate URL reachability and HMAC signature verification before going live. Returns 202 Accepted with `{ sent, event, tenantId }`. Limited to 10 calls per tenant per 10 minutes (429 beyond that).
+         */
+        post: operations["Notifications_sendTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/checkout/sessions": {
         parameters: {
             query?: never;
@@ -1356,7 +1400,7 @@ export interface paths {
         put?: never;
         /**
          * Create a checkout session
-         * @description Creates a single-purchase checkout and returns its hosted `url` plus a one-time `clientSecret` for embedding with @vexpay/js. The secret is returned only here — VEXPay stores just its hash. Outcomes arrive as `payment.*` webhooks carrying `checkoutSession: { id, reference, metadata }`.
+         * @description Creates a single-purchase checkout and returns its hosted `url` plus a one-time `clientSecret` for embedding with @vexpay/js. The secret is returned only here — VEX Pay stores just its hash. Outcomes arrive as `payment.*` webhooks carrying `checkoutSession: { id, reference, metadata }`.
          */
         post: operations["CheckoutSessions_create"];
         delete?: never;
@@ -1549,26 +1593,6 @@ export interface paths {
          * @description Test-mode accounts only (404 on live): completes the top-up as if the Pago Móvil arrived.
          */
         post: operations["Topups_simulate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/notifications/test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Send a test event to subscribed webhook endpoints
-         * @description Fires a `notification.test` event to every active webhook endpoint subscribed to that event (or all events, depending on your subscription list). Use this to validate URL reachability and HMAC signature verification before going live. Returns 202 Accepted with `{ sent, event, tenantId }`. Limited to 10 calls per tenant per 10 minutes (429 beyond that).
-         */
-        post: operations["Notifications_sendTest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1916,140 +1940,6 @@ export interface components {
              */
             error?: string;
         };
-        BsSettlementStatusDto: {
-            /**
-             * @description True when your available Bs is settled automatically every 15 minutes.
-             * @example true
-             */
-            enabled: boolean;
-            /**
-             * @description `active` = settling; `no_payout_account` / `payout_account_unverified` = add and verify a payout account; `payout_account_cooling` = destination changed recently; `paused` = paused by VEXPay; `opted_out` = off for your account; `disbursements` = your balance funds disbursements; `test_mode` = never settled in test mode.
-             * @example active
-             * @enum {string}
-             */
-            status: "active" | "no_payout_account" | "payout_account_unverified" | "payout_account_cooling" | "paused" | "opted_out" | "disbursements" | "test_mode";
-            /**
-             * @description Smallest available Bs amount that is settled.
-             * @example 100.00
-             */
-            minimumVes: string;
-        };
-        PlatformBalanceDto: {
-            /** Format: uuid */
-            tenantId: string;
-            /** @example plt_3fd84b2d9ad14f74a2d90f2f56984db5 */
-            platformId: string;
-            /** @example 10000.00 */
-            collectedVes: string;
-            /** @example 250.00 */
-            feesVes: string;
-            /** @example 1000.00 */
-            paidOutVes: string;
-            /**
-             * @description Net VES spent on VES→USDT conversions.
-             * @example 0.00
-             */
-            convertedVes: string;
-            /**
-             * @description Net card chargeback fees charged (fees minus fees returned on won disputes).
-             * @example 0.00
-             */
-            chargebackFeesVes: string;
-            /** @example 100.00 */
-            reserveVes: string;
-            /** @example 8650.00 */
-            ledgerNetVes: string;
-            /**
-             * @description VES under a balance hold set by VEXPay (none by default, see `balanceHoldHours`): such credits count in `ledgerNetVes` but cannot be paid out until their hold ends. Conversions and seller transfers may still use them.
-             * @example 0.00
-             */
-            heldVes?: string;
-            /**
-             * Format: date-time
-             * @description When the soonest held amount becomes available; null when nothing is held.
-             * @example 2026-10-20T00:48:52.784Z
-             */
-            nextReleaseAt?: string | null;
-            /**
-             * @description What payouts and automatic settlement can spend: ledgerNetVes − reserveVes − heldVes − unconfirmedVes (seller obligations already deducted via SELLER_TRANSFER).
-             * @example 4150.00
-             */
-            availableVes: string;
-            /**
-             * @description Bs from payments the bank has not confirmed yet: they count in `ledgerNetVes` but cannot be paid out or settled until the bank confirms them. Conversions and seller transfers may still use them.
-             * @example 4500.00
-             */
-            unconfirmedVes?: string;
-            /** @description Automatic Bs settlement to your verified payout account. */
-            settlement?: components["schemas"]["BsSettlementStatusDto"];
-            /** @example 8650.00 */
-            platformAvailableVes: string;
-            /**
-             * @description Sum of seller pending + available obligations.
-             * @example 1200.00
-             */
-            sellerObligationsVes: string;
-            /** @example 400.00 */
-            sellerPendingVes: string;
-            /** @example 800.00 */
-            sellerAvailableVes: string;
-            /** @example 2.5000 */
-            feePercent: string;
-            /** @example 0.00 */
-            feeFixedUsd: string;
-            /**
-             * @description Hours each incoming credit is held before payouts can spend it (0 = no hold, the default). Set by VEXPay.
-             * @example 0
-             */
-            balanceHoldHours?: number;
-        };
-        BalanceTransactionDto: {
-            /**
-             * Format: uuid
-             * @description Stable id of the movement; never changes or disappears.
-             */
-            id: string;
-            /**
-             * @example chargeback
-             * @enum {string}
-             */
-            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee";
-            /**
-             * @description Signed VES amount (negative = money out of your balance).
-             * @example -4000.00
-             */
-            amountVes: string;
-            /** Format: uuid */
-            paymentId?: string;
-            /** Format: uuid */
-            payoutId?: string;
-            /**
-             * Format: uuid
-             * @description Present on chargeback movements.
-             */
-            chargebackId?: string;
-            /** Format: uuid */
-            merchantId?: string;
-            /**
-             * @description externalRef of the linked payment or payout.
-             * @example order-1042
-             */
-            externalRef?: string;
-            /** @example Card chargeback (fraud) */
-            description: string;
-            /**
-             * Format: date-time
-             * @description Part of the 24h balance hold: this movement counts in `heldVes` (not `availableVes`) until this time.
-             */
-            availableAt?: string;
-            /** Format: date-time */
-            createdAt: string;
-        };
-        BalanceTransactionListDto: {
-            items: components["schemas"]["BalanceTransactionDto"][];
-            /** @description Pass as `cursor` to get the next (older) page; null on the last page. */
-            nextCursor: string | null;
-        };
         CreateWebhookDto: {
             /**
              * Format: uri
@@ -2104,6 +1994,140 @@ export interface components {
         DeleteWebhookResponseDto: {
             /** @example true */
             deleted: boolean;
+        };
+        BsSettlementStatusDto: {
+            /**
+             * @description True when your available Bs is settled automatically as soon as the bank confirms each sale.
+             * @example true
+             */
+            enabled: boolean;
+            /**
+             * @description `active` = settling; `no_payout_account` / `payout_account_unverified` = add and verify a payout account; `payout_account_cooling` = destination changed recently; `paused` = paused by VEX Pay; `disbursements` = your balance funds disbursements; `test_mode` = never settled in test mode.
+             * @example active
+             * @enum {string}
+             */
+            status: "active" | "no_payout_account" | "payout_account_unverified" | "payout_account_cooling" | "paused" | "disbursements" | "test_mode";
+            /**
+             * @description Smallest available Bs amount that is settled.
+             * @example 100.00
+             */
+            minimumVes: string;
+        };
+        PlatformBalanceDto: {
+            /** Format: uuid */
+            tenantId: string;
+            /** @example plt_3fd84b2d9ad14f74a2d90f2f56984db5 */
+            platformId: string;
+            /** @example 10000.00 */
+            collectedVes: string;
+            /** @example 250.00 */
+            feesVes: string;
+            /** @example 1000.00 */
+            paidOutVes: string;
+            /**
+             * @description Net VES spent on VES→USDT conversions.
+             * @example 0.00
+             */
+            convertedVes: string;
+            /**
+             * @description Net card chargeback fees charged (fees minus fees returned on won disputes).
+             * @example 0.00
+             */
+            chargebackFeesVes: string;
+            /** @example 100.00 */
+            reserveVes: string;
+            /** @example 8650.00 */
+            ledgerNetVes: string;
+            /**
+             * @description VES under a balance hold set by VEX Pay (none by default, see `balanceHoldHours`): such credits count in `ledgerNetVes` but cannot be paid out until their hold ends. Conversions and seller transfers may still use them.
+             * @example 0.00
+             */
+            heldVes?: string;
+            /**
+             * Format: date-time
+             * @description When the soonest held amount becomes available; null when nothing is held.
+             * @example 2026-10-20T00:48:52.784Z
+             */
+            nextReleaseAt?: string | null;
+            /**
+             * @description What payouts and automatic settlement can spend: ledgerNetVes − reserveVes − heldVes − unconfirmedVes (seller obligations already deducted via SELLER_TRANSFER).
+             * @example 4150.00
+             */
+            availableVes: string;
+            /**
+             * @description Bs from payments the bank has not confirmed yet: they count in `ledgerNetVes` but cannot be paid out or settled until the bank confirms them. Conversions and seller transfers may still use them.
+             * @example 4500.00
+             */
+            unconfirmedVes?: string;
+            /** @description Automatic Bs settlement to your verified payout account. */
+            settlement?: components["schemas"]["BsSettlementStatusDto"];
+            /** @example 8650.00 */
+            platformAvailableVes: string;
+            /**
+             * @description Sum of seller pending + available obligations.
+             * @example 1200.00
+             */
+            sellerObligationsVes: string;
+            /** @example 400.00 */
+            sellerPendingVes: string;
+            /** @example 800.00 */
+            sellerAvailableVes: string;
+            /** @example 2.5000 */
+            feePercent: string;
+            /** @example 0.00 */
+            feeFixedUsd: string;
+            /**
+             * @description Hours each incoming credit is held before payouts can spend it (0 = no hold, the default). Set by VEX Pay.
+             * @example 0
+             */
+            balanceHoldHours?: number;
+        };
+        BalanceTransactionDto: {
+            /**
+             * Format: uuid
+             * @description Stable id of the movement; never changes or disappears.
+             */
+            id: string;
+            /**
+             * @example chargeback
+             * @enum {string}
+             */
+            type: "payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee";
+            /**
+             * @description Signed VES amount (negative = money out of your balance).
+             * @example -4000.00
+             */
+            amountVes: string;
+            /** Format: uuid */
+            paymentId?: string;
+            /** Format: uuid */
+            payoutId?: string;
+            /**
+             * Format: uuid
+             * @description Present on chargeback movements.
+             */
+            chargebackId?: string;
+            /** Format: uuid */
+            merchantId?: string;
+            /**
+             * @description externalRef of the linked payment or payout.
+             * @example order-1042
+             */
+            externalRef?: string;
+            /** @example Card chargeback (fraud) */
+            description: string;
+            /**
+             * Format: date-time
+             * @description Part of the 24h balance hold: this movement counts in `heldVes` (not `availableVes`) until this time.
+             */
+            availableAt?: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        BalanceTransactionListDto: {
+            items: components["schemas"]["BalanceTransactionDto"][];
+            /** @description Pass as `cursor` to get the next (older) page; null on the last page. */
+            nextCursor: string | null;
         };
         PayoutResponseDto: {
             /**
@@ -2355,8 +2379,12 @@ export interface components {
             accountId: string;
             /** @example 0163 */
             bankCode: string;
-            /** @description Masked phone, e.g. …5555 */
+            /** @enum {string} */
+            type: "pago_movil" | "bank_account";
+            /** @description Masked destination: phone `…5555` (Pago Móvil) or account `••••6789` (bank_account). */
             destination: string;
+            /** @description Account holder name (bank_account only). */
+            holderName?: string | null;
             /** @example V12345678 */
             identification: string;
             /**
@@ -2403,20 +2431,36 @@ export interface components {
         };
         UpsertTenantPayoutAccountDto: {
             /**
-             * @description Beneficiary bank SIMF code (3–4 digits). Prefer codes from GET /v1/banks.
+             * @description `pago_movil` (bank + phone) or `bank_account` (20-digit checking account). Switching type is a destination change.
+             * @default pago_movil
+             * @enum {string}
+             */
+            type?: "pago_movil" | "bank_account";
+            /**
+             * @description Beneficiary bank SIMF code (3–4 digits). Prefer codes from GET /v1/banks. Required for `pago_movil`; for `bank_account` it is taken from the account number and, when sent, must match its first 4 digits.
              * @example 0163
              */
-            banco: string;
+            banco?: string;
             /**
-             * @description Beneficiary cédula/RIF.
+             * @description Beneficiary (account holder) cédula/RIF.
              * @example V12345678
              */
             cedula: string;
             /**
-             * @description Beneficiary Pago Móvil phone (58… or 0…).
+             * @description Beneficiary Pago Móvil phone (58… or 0…). Required for `pago_movil`.
              * @example 584121234567
              */
-            telefono: string;
+            telefono?: string;
+            /**
+             * @description 20-digit checking account number. Required for `bank_account`.
+             * @example 01160123450123456789
+             */
+            cuenta?: string;
+            /**
+             * @description Account holder name. Required for `bank_account`.
+             * @example Rival Plus C.A.
+             */
+            titular?: string;
         };
         ConfirmTenantPayoutAccountVerifyDto: {
             /**
@@ -2495,7 +2539,7 @@ export interface components {
             success?: boolean;
             /**
              * Format: uuid
-             * @description VEXPay payment id for this débito inmediato (method DEBITO_INMEDIATO).
+             * @description VEX Pay payment id for this débito inmediato (method DEBITO_INMEDIATO).
              * @example 3fd84b2d-9ad1-4f74-a2d9-0f2f56984db5
              */
             paymentId: string;
@@ -2650,6 +2694,33 @@ export interface components {
              */
             cedula: string;
         };
+        SplitShareDto: {
+            /**
+             * @description A merchant of your account (UUID or `mrc_…` id). Each merchant at most once per payment.
+             * @example mrc_3f2b9c1e0a7d4e6f8b1c2d3e4f5a6b7c
+             */
+            merchantId: string;
+            /**
+             * @description This merchant's share, in the currency of the request's amount: VES for débito, C2P and Pago Móvil; for VPOS, VES when you send `vesAmount`, else USD. A string with exactly two decimals ("6000.00") or a number with at most two. USD shares are converted at the payment's rate and rounded down to Bs 0.01. Whatever the shares do not cover stays with your account (the marketplace remainder).
+             * @example 6000.00
+             */
+            amount: string | number;
+            /**
+             * @description Your commission on this share, in VES (exactly two decimals). Not with applicationFeePercent.
+             * @example 1200.00
+             */
+            applicationFeeVes?: string;
+            /**
+             * @description Your commission as a percent of this share's VES amount. When both are omitted the merchant's negotiated commission applies, else your default commission, else none.
+             * @example 20
+             */
+            applicationFeePercent?: number;
+            /**
+             * @description Free text returned as sent.
+             * @example order-1042/provider-a
+             */
+            reference?: string;
+        };
         ImmediateDebitDto: {
             /**
              * @description 3–4 digit bank code (padded to 4 digits when sent to the network). Prefer codes from GET /v1/banks.
@@ -2703,6 +2774,8 @@ export interface components {
              * @example 10
              */
             applicationFeePercent?: number;
+            /** @description Split this payment between up to 10 of your merchants (marketplace). Each merchant is credited its share minus its part of the VEX Pay fee and your commission when the bank confirms the payment; the rest stays with your account. Not with merchantId / applicationFeeVes / applicationFeePercent, and not with onwardPayout. See the "Marketplace: split one payment between comercios" guide. */
+            splits?: components["schemas"]["SplitShareDto"][];
         };
         ManualOperationPollDto: {
             /**
@@ -3163,7 +3236,7 @@ export interface components {
             merchantId?: string;
             idempotencyKey: string;
             txHash?: string;
-            /** @description Settled inside VEXPay (destination is one of your own deposit addresses). */
+            /** @description Settled inside VEX Pay (destination is one of your own deposit addresses). */
             internal: boolean;
             failureReason?: string;
             /** Format: date-time */
@@ -3266,7 +3339,7 @@ export interface components {
         };
         CreateCopPaymentDto: {
             /**
-             * @description Amount in whole Colombian pesos. At least 2,000 (`amount_below_minimum` otherwise).
+             * @description Amount in whole Colombian pesos. At least 20,000 (`amount_below_minimum` otherwise).
              * @example 100000
              */
             amountCop: number;
@@ -3719,6 +3792,8 @@ export interface components {
             applicationFeePercent?: number;
             /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
             onwardPayout?: components["schemas"]["OnwardPayoutDto"];
+            /** @description Split this payment between up to 10 of your merchants (marketplace). Each merchant is credited its share minus its part of the VEX Pay fee and your commission when the bank confirms the payment; the rest stays with your account. Not with merchantId / applicationFeeVes / applicationFeePercent, and not with onwardPayout. See the "Marketplace: split one payment between comercios" guide. */
+            splits?: components["schemas"]["SplitShareDto"][];
         };
         OnwardPayoutStatusDto: {
             /**
@@ -3766,6 +3841,41 @@ export interface components {
             sendAfter?: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        PaymentSplitViewDto: {
+            /** Format: uuid */
+            merchantId: string;
+            /**
+             * @description The merchant's account id (same as the payment-level accountId).
+             * @example acct_3f2b9c1e0a7d4e6f8b1c2d3e4f5a6b7c
+             */
+            accountId: string;
+            /**
+             * @description The merchant's externalRef.
+             * @example planazo-comercio-17
+             */
+            merchantExternalRef?: string | null;
+            /** @example 6000.00 */
+            amountVes: string;
+            /**
+             * @description Your commission on this share.
+             * @example 1200.00
+             */
+            applicationFeeVes: string;
+            /** @example 20.0000 */
+            applicationFeePercent?: string | null;
+            /**
+             * @description This share's part of the VEX Pay fee (null until completed).
+             * @example 180.00
+             */
+            feeVes?: string | null;
+            /**
+             * @description Credited to the merchant (null until completed; 0.00 when the share nets nothing).
+             * @example 4620.00
+             */
+            netVes?: string | null;
+            /** @example order-1042/provider-a */
+            reference?: string | null;
         };
         C2pIntentResponseDto: {
             /**
@@ -3856,6 +3966,8 @@ export interface components {
             reversalTxId?: number;
             /** @description Present when the pay-in was sent with `onwardPayout`. */
             onwardPayout?: components["schemas"]["OnwardPayoutStatusDto"];
+            /** @description Multi-merchant split payments only: each merchant share with its commission, VEX Pay fee and net (feeVes / netVes are set when the payment completes). Omitted for every other payment. */
+            splits?: components["schemas"]["PaymentSplitViewDto"][];
             /**
              * Format: uuid
              * @description Use this value as intentId when executing the C2P charge.
@@ -3916,6 +4028,8 @@ export interface components {
             applicationFeePercent?: number;
             /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
             onwardPayout?: components["schemas"]["OnwardPayoutDto"];
+            /** @description Split this payment between up to 10 of your merchants (marketplace). Each merchant is credited its share minus its part of the VEX Pay fee and your commission when the bank confirms the payment; the rest stays with your account. Not with merchantId / applicationFeeVes / applicationFeePercent, and not with onwardPayout. See the "Marketplace: split one payment between comercios" guide. */
+            splits?: components["schemas"]["SplitShareDto"][];
         };
         PaymentReceiptDto: {
             /**
@@ -4006,6 +4120,8 @@ export interface components {
             reversalTxId?: number;
             /** @description Present when the pay-in was sent with `onwardPayout`. */
             onwardPayout?: components["schemas"]["OnwardPayoutStatusDto"];
+            /** @description Multi-merchant split payments only: each merchant share with its commission, VEX Pay fee and net (feeVes / netVes are set when the payment completes). Omitted for every other payment. */
+            splits?: components["schemas"]["PaymentSplitViewDto"][];
         };
         VposPaymentDto: {
             /**
@@ -4072,6 +4188,8 @@ export interface components {
              * @example 10
              */
             applicationFeePercent?: number;
+            /** @description Split this payment between up to 10 of your merchants (marketplace). Each merchant is credited its share minus its part of the VEX Pay fee and your commission when the bank confirms the payment; the rest stays with your account. Not with merchantId / applicationFeeVes / applicationFeePercent, and not with onwardPayout. See the "Marketplace: split one payment between comercios" guide. */
+            splits?: components["schemas"]["SplitShareDto"][];
         };
         PaymentMethodAvailabilityDto: {
             /**
@@ -4159,6 +4277,8 @@ export interface components {
             debtorCellPhone?: string;
             /** @description Convert this payment's net VES to USDT once it completes and send it to this wallet. Needs USDT and conversions enabled; not allowed with merchantId. See the "Pay in bolívars, receive USDT" guide. */
             onwardPayout?: components["schemas"]["OnwardPayoutDto"];
+            /** @description Split this payment between up to 10 of your merchants (marketplace). Each merchant is credited its share minus its part of the VEX Pay fee and your commission when the bank confirms the payment; the rest stays with your account. Not with merchantId / applicationFeeVes / applicationFeePercent, and not with onwardPayout. See the "Marketplace: split one payment between comercios" guide. */
+            splits?: components["schemas"]["SplitShareDto"][];
         };
         PayoutMethodResponseDto: {
             /** Format: uuid */
@@ -4357,6 +4477,8 @@ export interface components {
              * @example 04145555555
              */
             phone?: string;
+            /** @description Pay this merchant's available balance automatically every 15 minutes. Omit it to use your account's `merchantAutoPayoutDefault` (GET /v1/marketplace/settings). Used only when the merchant is created; change it later with PATCH /v1/merchants/{id}. */
+            autoPayoutEnabled?: boolean;
         };
         CreatePayoutMethodDto: {
             /**
@@ -4480,6 +4602,11 @@ export interface components {
             transferKey?: string;
             /** Format: uuid */
             paymentId?: string | null;
+            /**
+             * @description `credit` rows of a multi-merchant split payment: the share `reference` sent with the payment.
+             * @example order-1042/provider-a
+             */
+            splitReference?: string;
             /** Format: uuid */
             payoutId?: string | null;
             /**
@@ -4544,6 +4671,35 @@ export interface components {
              * @example 12.5
              */
             applicationFeePercent?: number | null;
+        };
+        MarketplaceSettingsDto: {
+            /**
+             * @description When true, merchants you create without `autoPayoutEnabled` start with auto-payout on. Existing merchants keep their setting.
+             * @example true
+             */
+            merchantAutoPayoutDefault: boolean;
+            /**
+             * @description Smallest available balance, in USD at the BCV rate, that an automatic merchant payout sends. null = no minimum (any balance of Bs 1 or more).
+             * @example 10.00
+             */
+            merchantAutoPayoutMinUsd?: string | null;
+        };
+        UpdateMarketplaceSettingsDto: {
+            /** @example true */
+            merchantAutoPayoutDefault?: boolean;
+            /**
+             * @description USD with at most two decimals (string or number), 0–100000. null or 0 clears the minimum.
+             * @example 10.00
+             */
+            merchantAutoPayoutMinUsd?: string | null;
+        };
+        NotificationTestResponseDto: {
+            /** @example true */
+            sent: boolean;
+            /** @example notification.test */
+            event: string;
+            /** Format: uuid */
+            tenantId: string;
         };
         CreateCheckoutSessionDto: {
             /**
@@ -4693,7 +4849,7 @@ export interface components {
             items: components["schemas"]["PaymentLinkResponseDto"][];
         };
         CreateProductDto: {
-            /** @example Camiseta VEXPay */
+            /** @example Camiseta VEX Pay */
             name: string;
             description?: string;
             /** @example https://cdn.example/shirt.png */
@@ -4833,14 +4989,6 @@ export interface components {
             monthUsedUsd: string;
             /** @example 2500.00 */
             monthRemainingUsd: string;
-        };
-        NotificationTestResponseDto: {
-            /** @example true */
-            sent: boolean;
-            /** @example notification.test */
-            event: string;
-            /** Format: uuid */
-            tenantId: string;
         };
         CreateCustomerDto: {
             /** @example Ana Pérez */
@@ -5114,7 +5262,7 @@ export interface components {
         };
         PayInvoiceDto: {
             /**
-             * @description Mark the invoice paid outside VEXPay (cash, transfer). No balance change.
+             * @description Mark the invoice paid outside VEX Pay (cash, transfer). No balance change.
              * @example true
              */
             paidOutOfBand: boolean;
@@ -5217,140 +5365,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    Balance_getBalance: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformBalanceDto"];
-                };
-            };
-            /** @description Missing, invalid, or inactive tenant API key. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Client error. */
-            "4XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Server or upstream bank error. */
-            "5XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    Balance_listTransactions: {
-        parameters: {
-            query?: {
-                /** @description ISO 8601, exclusive (createdAt). */
-                to?: string;
-                /** @description ISO 8601, inclusive (createdAt). */
-                from?: string;
-                /** @description Only movements of this payout. */
-                payoutId?: string;
-                /** @description Only movements of this payment. */
-                paymentId?: string;
-                /** @description One or more types (repeat or comma-separate). */
-                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee")[];
-                /** @description `nextCursor` from the previous page. */
-                cursor?: string;
-                /** @description 1–100, default 50. */
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BalanceTransactionListDto"];
-                };
-            };
-            /** @description `invalid_data` — a parameter is invalid. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Missing, invalid, or inactive tenant API key. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Client error. */
-            "4XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Server or upstream bank error. */
-            "5XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
     Webhooks_listWebhooks: {
         parameters: {
             query?: never;
@@ -5583,6 +5597,140 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Balance_getBalance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformBalanceDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Balance_listTransactions: {
+        parameters: {
+            query?: {
+                /** @description ISO 8601, exclusive (createdAt). */
+                to?: string;
+                /** @description ISO 8601, inclusive (createdAt). */
+                from?: string;
+                /** @description Only movements of this payout. */
+                payoutId?: string;
+                /** @description Only movements of this payment. */
+                paymentId?: string;
+                /** @description One or more types (repeat or comma-separate). */
+                type?: ("payment" | "fee" | "payment_reversal" | "fee_reversal" | "payout" | "payout_reversal" | "chargeback" | "chargeback_fee" | "chargeback_reversal" | "adjustment" | "seller_transfer" | "seller_transfer_reversal" | "conversion" | "conversion_reversal" | "merchant_payout_fee" | "disbursement_payout_fee" | "disbursement_payout_fee_reversal" | "topup" | "topup_fee" | "topup_instant_release" | "topup_instant_fee")[];
+                /** @description `nextCursor` from the previous page. */
+                cursor?: string;
+                /** @description 1–100, default 50. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BalanceTransactionListDto"];
+                };
+            };
+            /** @description `invalid_data` — a parameter is invalid. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6611,7 +6759,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Network payload plus VEXPay `paymentId` (and `externalRef` when sent). */
+            /** @description Network payload plus VEX Pay `paymentId` (and `externalRef` when sent). */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -11139,6 +11287,197 @@ export interface operations {
             };
         };
     };
+    MarketplaceSettings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceSettingsDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    MarketplaceSettings_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMarketplaceSettingsDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketplaceSettingsDto"];
+                };
+            };
+            /** @description `invalid_data` — unknown field or invalid value. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
+    Notifications_sendTest: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
+                "Idempotency-Key"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Test event queued/delivered to matching endpoints. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationTestResponseDto"];
+                };
+            };
+            /** @description Missing, invalid, or inactive tenant API key. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description More than 10 test notifications in 10 minutes. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Client error. */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+            /** @description Server or upstream bank error. */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorDto"];
+                };
+            };
+        };
+    };
     CheckoutSessions_create: {
         parameters: {
             query?: never;
@@ -12302,74 +12641,6 @@ export interface operations {
             };
             /** @description `topups_not_enabled` — top-ups are off for this account (VEX Pay turns them on). */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Client error. */
-            "4XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Server or upstream bank error. */
-            "5XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-        };
-    };
-    Notifications_sendTest: {
-        parameters: {
-            query?: never;
-            header?: {
-                /** @description Optional. Same key + same body within 24h replays the stored response (`Idempotent-Replayed: true`); a different body returns 409 `idempotency_key_reused`. */
-                "Idempotency-Key"?: string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Test event queued/delivered to matching endpoints. */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationTestResponseDto"];
-                };
-            };
-            /** @description Missing, invalid, or inactive tenant API key. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description Live mode not activated (`live_mode_not_activated`): the live account is pending VEX Pay review or suspended. Test keys are unaffected. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiErrorDto"];
-                };
-            };
-            /** @description More than 10 test notifications in 10 minutes. */
-            429: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -3,7 +3,7 @@ import type { OperationId } from './generated/routes';
 
 export type { OperationId };
 
-/** Every request/response schema in the VEXPay API, e.g. `Schemas['PaymentReceiptDto']`. */
+/** Every request/response schema in the VEX Pay API, e.g. `Schemas['PaymentReceiptDto']`. */
 export type Schemas = components['schemas'];
 
 type Params<O extends OperationId> = operations[O]['parameters'];
