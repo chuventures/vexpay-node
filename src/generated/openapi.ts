@@ -599,7 +599,7 @@ export interface paths {
         };
         /**
          * List COP channels
-         * @description The COP channels you can use right now in this mode, with what each needs. When `pse` is listed, `pseBanks` gives the bank codes for `pse.bankCode`. When a channel needs terms acceptance, show the buyer the `terms` links before you send `buyer.termsAccepted: true`. `card` is listed with `checkoutOnly: true`: take it through the hosted checkout.
+         * @description The COP channels you can use right now in this mode (Bre-B, Nequi, Daviplata), with what each needs.
          */
         get: operations["CopPayments_channels"];
         put?: never;
@@ -621,7 +621,7 @@ export interface paths {
         put?: never;
         /**
          * Create a COP payment
-         * @description Collect Colombian pesos with Bre-B (QR code or transfer key from any Colombian bank app), Nequi (push to the buyer's app), Daviplata (SMS code or redirect), PSE and Bancolombia (redirect to the buyer's bank) or Bancolombia QR. See `GET /v1/cop/channels` for what you can use and what each needs. The response says what the buyer must do next. The payment completes asynchronously: listen for `payment.completed` / `payment.failed`, or read it back. Send an `Idempotency-Key` to retry safely.
+         * @description Collect Colombian pesos with Bre-B (QR code or transfer key from any Colombian bank app), Nequi (push to the buyer's app), or Daviplata (SMS code). See `GET /v1/cop/channels` for what you can use and what each needs. The response says what the buyer must do next. The payment completes asynchronously: listen for `payment.completed` / `payment.failed`, or read it back. Send an `Idempotency-Key` to retry safely.
          */
         post: operations["CopPayments_create"];
         delete?: never;
@@ -695,7 +695,7 @@ export interface paths {
         put?: never;
         /**
          * Refund a COP payment in full
-         * @description Bre-B, Nequi and Daviplata payments with an SMS code: within 96 hours of completion. Card: within the void window (24 hours). Other channels answer `refund_not_supported`. The amount credited to you is debited from your COP balance and the fee is returned. Partial refunds are not supported.
+         * @description Bre-B, Nequi and Daviplata payments: within 96 hours of completion. The amount credited to you is debited from your COP balance and the fee is returned. Partial refunds are not supported.
          */
         post: operations["CopPayments_refund"];
         delete?: never;
@@ -2417,6 +2417,14 @@ export interface components {
             expiresAt: string;
             /** Format: uuid */
             accountId: string;
+            /**
+             * @description Test mode only: the two sandbox micro-deposit amounts to confirm (no money is sent in Test). Never present in live mode.
+             * @example [
+             *       "0.13",
+             *       "0.27"
+             *     ]
+             */
+            testAmounts?: string[];
         };
         TenantPayoutAccountVerifyConfirmResponseDto: {
             /**
@@ -3246,13 +3254,13 @@ export interface components {
         };
         CopChannelDto: {
             /**
-             * @example pse
+             * @example nequi
              * @enum {string}
              */
-            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
+            channel: "breb" | "nequi" | "daviplata";
             /**
              * @description Buyer-facing name (Spanish).
-             * @example PSE
+             * @example Nequi
              */
             label: string;
             /**
@@ -3260,37 +3268,11 @@ export interface components {
              * @example true
              */
             needsBuyer: boolean;
-            /**
-             * @description Show the buyer the `terms` links and send `buyer.termsAccepted: true`.
-             * @example true
-             */
-            needsTermsAcceptance: boolean;
-            /**
-             * @description Only through the hosted checkout (checkout sessions or payment links), never `POST /v1/cop/payments`.
-             * @example false
-             */
-            checkoutOnly: boolean;
             /** @example 20000 */
             minAmountCop: number;
         };
-        CopPseBankDto: {
-            /** @example 1007 */
-            code: string;
-            /** @example Bancolombia */
-            name: string;
-        };
-        CopTermsDto: {
-            /** @description Terms and conditions the buyer accepts. */
-            termsUrl: string;
-            /** @description Personal data processing authorization the buyer accepts. */
-            personalDataUrl: string;
-        };
         CopChannelsDto: {
             channels: components["schemas"]["CopChannelDto"][];
-            /** @description Present when `pse` is listed: banks for `pse.bankCode`. */
-            pseBanks?: components["schemas"]["CopPseBankDto"][];
-            /** @description Present when a listed channel needs terms acceptance. */
-            terms?: components["schemas"]["CopTermsDto"];
         };
         CopBuyerDto: {
             /** @example Juan */
@@ -3318,24 +3300,6 @@ export interface components {
              * @example 1234567890
              */
             documentNumber?: string;
-            /**
-             * @description PSE only (required): `natural` person or `juridica` (company).
-             * @example natural
-             * @enum {string}
-             */
-            personType?: "natural" | "juridica";
-            /**
-             * @description Required (`true`) for channels the channel catalog marks `needsTermsAcceptance`: confirms you showed the buyer the catalog `terms` links.
-             * @example true
-             */
-            termsAccepted?: boolean;
-        };
-        CopPseDto: {
-            /**
-             * @description Bank code from `GET /v1/cop/channels` → `pseBanks`.
-             * @example 1007
-             */
-            bankCode: string;
         };
         CreateCopPaymentDto: {
             /**
@@ -3344,11 +3308,11 @@ export interface components {
              */
             amountCop: number;
             /**
-             * @description `breb`: QR code / transfer key the buyer pays from any Colombian bank app. `nequi`: push to the buyer's Nequi app. `daviplata`: SMS code the buyer reads to you, or a redirect. `pse` and `bancolombia_transfer`: redirect to the buyer's bank. `bancolombia_qr`: QR the buyer scans in the Bancolombia app. `card`: hosted checkout only (`channel_requires_checkout`).
+             * @description `breb`: QR code / transfer key the buyer pays from any Colombian bank app. `nequi`: push to the buyer's Nequi app. `daviplata`: SMS code the buyer reads to you.
              * @example breb
              * @enum {string}
              */
-            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
+            channel: "breb" | "nequi" | "daviplata";
             /**
              * @description Shown to the buyer.
              * @example Order 1042
@@ -3370,24 +3334,15 @@ export interface components {
             };
             /** @description Required for every channel except `breb`. */
             buyer?: components["schemas"]["CopBuyerDto"];
-            /** @description Required for `pse`. */
-            pse?: components["schemas"]["CopPseDto"];
         };
         CopNextActionDto: {
             /**
-             * @description `redirect`: send the buyer to `url` to authorize at their bank. `redirect_pending`: the URL is not ready yet — read the payment again. `processing`: nothing to do, the outcome follows.
+             * @description `show_qr`: Bre-B QR / transfer key. `approve_in_app`: the buyer approves the Nequi push. `submit_otp`: send the Daviplata SMS code.
              * @enum {string}
              */
-            type: "show_qr" | "approve_in_app" | "submit_otp" | "redirect" | "redirect_pending" | "processing";
+            type: "show_qr" | "approve_in_app" | "submit_otp";
             /** @description Bre-B: base64 PNG of the payment QR. Returned only when the payment is created. */
             qrPngBase64?: string;
-            /** @description Bancolombia QR: base64 SVG of the payment QR. */
-            qrSvgBase64?: string;
-            /**
-             * @description `redirect`: where the buyer authorizes the payment.
-             * @example https://…
-             */
-            url?: string;
             /** @description Bre-B: transfer key the buyer can enter instead of scanning. */
             transferKey?: string;
             /**
@@ -3404,7 +3359,7 @@ export interface components {
             /** @enum {string} */
             method: "COP";
             /** @enum {string} */
-            channel: "breb" | "nequi" | "daviplata" | "card" | "pse" | "bancolombia_transfer" | "bancolombia_qr";
+            channel: "breb" | "nequi" | "daviplata";
             /** @example 100000 */
             amountCop: number;
             /**
@@ -3427,27 +3382,16 @@ export interface components {
             metadata: {
                 [key: string]: string;
             };
-            /**
-             * @description `chargeback`: a refunded card payment the buyer disputed with their bank.
-             * @enum {string}
-             */
-            failureCode?: "expired" | "rejected" | "processor_error" | "processor_unknown" | "chargeback";
+            /** @enum {string} */
+            failureCode?: "expired" | "rejected" | "processor_error" | "processor_unknown";
             /** Format: date-time */
             expiresAt?: string;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
             completedAt?: string;
-            /** @description What the buyer must do next. Returned when the payment is created, and on reads while a bank redirect or QR is pending. */
+            /** @description What the buyer must do next. Returned when the payment is created. */
             next?: components["schemas"]["CopNextActionDto"];
-            /**
-             * @description Card payments: brand and last 4 digits, once known.
-             * @example {
-             *       "brand": "VISA",
-             *       "last4": "4242"
-             *     }
-             */
-            card?: Record<string, never>;
         };
         SubmitCopOtpDto: {
             /**
@@ -4401,6 +4345,14 @@ export interface components {
             expiresAt: string;
             /** Format: uuid */
             payoutMethodId?: string;
+            /**
+             * @description Test mode only: the two sandbox micro-deposit amounts to confirm (no money is sent in Test). Never present in live mode.
+             * @example [
+             *       "0.13",
+             *       "0.27"
+             *     ]
+             */
+            testAmounts?: string[];
         };
         VerifyConfirmResponseDto: {
             /** @example verified */
@@ -4703,10 +4655,15 @@ export interface components {
         };
         CreateCheckoutSessionDto: {
             /**
-             * @description USD amount, up to 2 decimals.
+             * @description USD amount, up to 2 decimals. Send exactly one of `amountUsd` or `amountVes`.
              * @example 25
              */
-            amountUsd: number;
+            amountUsd?: number;
+            /**
+             * @description Exact bolívar amount, up to 2 decimals: Pago Móvil, Débito Inmediato and card charge exactly this, whatever the rate. `amountUsd` is then derived at your Bolívar rate. Send exactly one of `amountUsd` or `amountVes`; `cop` is not offered.
+             * @example 2000
+             */
+            amountVes?: number;
             /**
              * @description Buyer-facing label on the checkout.
              * @example Pedido #1042
@@ -4778,8 +4735,16 @@ export interface components {
             clientSecret?: string;
             /** @example https://pay.vexpay.app/pay/cs-9f2a4b7c1d3e */
             url: string;
-            /** @example 25.00 */
+            /**
+             * @description USD amount; for a bolívar-priced session, `amountVes` at your Bolívar rate when it was created.
+             * @example 25.00
+             */
             amountUsd: string;
+            /**
+             * @description Exact bolívar amount charged, for a session created with `amountVes`; null otherwise.
+             * @example 2000.00
+             */
+            amountVes?: string | null;
             description?: string | null;
             reference?: string | null;
             metadata: {
@@ -8066,7 +8031,7 @@ export interface operations {
                     "application/json": components["schemas"]["CopPaymentDto"];
                 };
             };
-            /** @description `invalid_data` (names the field), `amount_below_minimum`, `amount_out_of_range`, or `channel_requires_checkout` (card). */
+            /** @description `invalid_data` (names the field), `amount_below_minimum` or `amount_out_of_range`. */
             400: {
                 headers: {
                     [name: string]: unknown;

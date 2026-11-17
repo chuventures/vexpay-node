@@ -17,14 +17,16 @@ describe('cop', () => {
         return {
           status: 200,
           body: {
-            channels: [{ channel: 'pse', label: 'PSE', needsBuyer: true, needsTermsAcceptance: true, checkoutOnly: false, minAmountCop: 20000 }],
-            pseBanks: [{ code: '1007', name: 'Bancolombia' }],
-            terms: { termsUrl: 'https://t', personalDataUrl: 'https://d' },
+            channels: [
+              { channel: 'breb', label: 'Bre-B', needsBuyer: false, minAmountCop: 20000 },
+              { channel: 'nequi', label: 'Nequi', needsBuyer: true, minAmountCop: 20000 },
+              { channel: 'daviplata', label: 'Daviplata', needsBuyer: true, minAmountCop: 20000 },
+            ],
           },
         };
       }
-      if (req.method === 'POST' && (req.body as { channel?: string } | undefined)?.channel === 'pse') {
-        return { status: 201, body: { ...PAYMENT, channel: 'pse', next: { type: 'redirect', url: 'https://bank.example/pse' } } };
+      if (req.method === 'POST' && (req.body as { channel?: string } | undefined)?.channel === 'nequi') {
+        return { status: 201, body: { ...PAYMENT, channel: 'nequi', next: { type: 'approve_in_app', phoneMasked: '****567' } } };
       }
       if (req.url === '/v1/cop/balance') return { status: 200, body: { availableCop: 96500, pendingPayoutCop: 0, asOf: '2026-10-08T00:00:00.000Z' } };
       if (req.url.endsWith('/otp')) return { status: 200, body: { ...PAYMENT, status: 'completed', feeCop: 1750 } };
@@ -65,23 +67,18 @@ describe('cop', () => {
     expect(server.requests.at(-1)!.url).toBe(`/v1/cop/payments/${PAYMENT.id}/refund`);
   });
 
-  it('lists channels, then creates a PSE payment that redirects to the bank', async () => {
+  it('lists channels, then creates a Nequi payment the buyer approves in the app', async () => {
     const catalog = await vexpay.cop.channels();
     expect(server.requests.at(-1)!.url).toBe('/v1/cop/channels');
-    expect(catalog.channels[0]).toMatchObject({ channel: 'pse', needsTermsAcceptance: true });
-    expect(catalog.pseBanks?.[0]?.code).toBe('1007');
+    expect(catalog.channels.map((c) => c.channel)).toEqual(['breb', 'nequi', 'daviplata']);
 
     const payment = await vexpay.cop.payments.create({
       amountCop: 80000,
-      channel: 'pse',
-      pse: { bankCode: catalog.pseBanks![0]!.code },
-      buyer: {
-        firstName: 'Juan', lastName: 'Pérez', personType: 'natural', email: 'juan@example.com', phone: '3001234567',
-        documentType: 'CC', documentNumber: '1234567890', termsAccepted: true,
-      },
+      channel: 'nequi',
+      buyer: { firstName: 'Juan', lastName: 'Pérez', email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890' },
     });
-    expect(payment.next).toEqual({ type: 'redirect', url: 'https://bank.example/pse' });
-    expect(server.requests.at(-1)!.body).toMatchObject({ pse: { bankCode: '1007' }, buyer: { termsAccepted: true, personType: 'natural' } });
+    expect(payment.next).toEqual({ type: 'approve_in_app', phoneMasked: '****567' });
+    expect(server.requests.at(-1)!.body).toMatchObject({ channel: 'nequi', buyer: { phone: '3001234567' } });
   });
 
   it('reads the COP balance', async () => {

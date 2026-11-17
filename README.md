@@ -180,27 +180,15 @@ await vexpay.conversions.settings.update({ autoConvert: { COP: { percent: 50 } }
 
 ## Colombian pesos (COP)
 
-Collect pesos from buyers in Colombia through PSE, Bancolombia (transfer or QR), Bre-B, Nequi or Daviplata — and cards on the hosted checkout. Amounts are whole pesos, payments complete asynchronously (`payment.completed` / `payment.failed`), and completed payments go to your COP balance net of the COP fee. COP must be enabled on your account — otherwise the calls fail with `method_not_allowed` (403).
+Collect pesos from buyers in Colombia through Bre-B, Nequi or Daviplata. Amounts are whole pesos, payments complete asynchronously (`payment.completed` / `payment.failed`), and completed payments go to your COP balance net of the COP fee. COP must be enabled on your account — otherwise the calls fail with `method_not_allowed` (403).
 
 ```ts
 import VexPay from '@vexpay/node';
 
 const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
 
-// What your account can use now, the PSE banks, and the terms links some channels need.
-const { channels, pseBanks, terms } = await vexpay.cop.channels();
-
-// PSE: send the buyer to their bank (next.url). On redirect_pending, retrieve again in a few seconds.
-const pse = await vexpay.cop.payments.create({
-  amountCop: 80000,
-  channel: 'pse',
-  pse: { bankCode: pseBanks![0]!.code },
-  buyer: {
-    firstName: 'Juan', lastName: 'Pérez', personType: 'natural', email: 'juan@example.com', phone: '3001234567',
-    documentType: 'CC', documentNumber: '1234567890', termsAccepted: true, // the buyer accepted `terms`
-  },
-});
-if (pse.next?.type === 'redirect') console.log('Send the buyer to', pse.next.url);
+// What your account can use now (Bre-B, Nequi, Daviplata) and what each needs.
+const { channels } = await vexpay.cop.channels();
 
 // Bre-B: no buyer data. Show next.qrPngBase64 as an image and next.transferKey as text.
 const breb = await vexpay.cop.payments.create(
@@ -212,10 +200,10 @@ const breb = await vexpay.cop.payments.create(
 await vexpay.cop.payments.create({
   amountCop: 50000,
   channel: 'nequi',
-  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890', termsAccepted: true },
+  buyer: { email: 'juan@example.com', phone: '3001234567', documentType: 'CC', documentNumber: '1234567890' },
 });
 
-// Daviplata: with next.type 'submit_otp' the buyer reads you the SMS code; submit it (otherwise follow next.url).
+// Daviplata: with next.type 'submit_otp' the buyer reads you the SMS code; submit it.
 const davi = await vexpay.cop.payments.create({
   amountCop: 50000,
   channel: 'daviplata',
@@ -227,7 +215,7 @@ const status = (await vexpay.cop.payments.retrieve(breb.id)).status; // pending 
 const { availableCop } = await vexpay.cop.balance.retrieve();
 ```
 
-`cancel(id)` cancels a pending payment and `refund(id)` refunds a completed one in full (cards within 24 hours, Bre-B within 96 hours; channels without API refunds fail with `refund_not_supported`). Send `buyer.termsAccepted: true` for channels whose catalog entry has `needsTermsAcceptance`. A webhook for a COP payment has `data.method === 'COP'`; read it as `CopPaymentWebhookData`.
+`cancel(id)` cancels a pending payment and `refund(id)` refunds a completed one in full within 96 hours (a payment that can no longer be refunded through the API fails with `refund_not_supported`). A webhook for a COP payment has `data.method === 'COP'`; read it as `CopPaymentWebhookData`.
 
 **Test mode** (test API keys use a sandbox):
 
@@ -235,9 +223,7 @@ const { availableCop } = await vexpay.cop.balance.retrieve();
 |---|---|---|
 | Bre-B | No buyer data | QR and key from the sandbox. **Never send real money to them** — sandbox keys are reachable from real banks and the money is not credited. |
 | Nequi | Phone `3991111111`, any valid document and email | Completes on its own within about a minute; `3992222222` is declined |
-| Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | With `submit_otp`, OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp`. With `redirect`, follow the test page |
-| PSE | Any valid buyer data | Bank code `1` approves, `2` declines |
-| Card (hosted checkout) | `4242 4242 4242 4242`, any future expiry and CVC | Approved; `4111 1111 1111 1111` is declined |
+| Daviplata | Same buyer data (`CC`, `CE` or `TI` only) | With `submit_otp`, OTP `123456`, `000000` or `111111` completes it; any other code fails with `invalid_otp` |
 
 ## Subscriptions
 

@@ -67,6 +67,11 @@ export interface PaymentWebhookData {
   method: 'C2P' | 'VPOS' | 'PAGO_MOVIL' | 'DEBITO_INMEDIATO' | 'COP';
   usdAmount: number;
   vesAmount: number;
+  /**
+   * Pago Móvil only, present when the payer sent more than asked (up to Bs 500 more is accepted):
+   * the bolívar amount originally asked. `vesAmount` and `usdAmount` are then what arrived.
+   */
+  requestedVesAmount?: number;
   /** Official BCV rate (Bs per $1) when the payment was created. */
   bcvRate: number;
   /** Rate the payment was priced at: `bcvRate` for BCV accounts, the market rate for MARKET accounts. */
@@ -108,19 +113,15 @@ export interface CopPaymentWebhookData {
   method: 'COP';
   currency: 'COP';
   status: 'pending' | 'completed' | 'failed' | 'canceled' | 'refunded';
-  channel: 'breb' | 'nequi' | 'daviplata' | 'card' | 'pse' | 'bancolombia_transfer' | 'bancolombia_qr';
+  channel: 'breb' | 'nequi' | 'daviplata';
   amountCop: number;
-  /** Card payments: brand and last 4 digits. */
-  card?: { brand: string; last4: string };
   feeCop?: number;
   amountUsd?: string;
   copRate?: string;
   reference?: string;
   externalRef?: string;
   metadata: Record<string, string>;
-  failureCode?: 'expired' | 'rejected' | 'processor_error' | 'processor_unknown' | 'chargeback';
-  /** `payment.reversed` from a card dispute: `"chargeback"` (the amount was debited from your COP balance). */
-  reason?: 'chargeback';
+  failureCode?: 'expired' | 'rejected' | 'processor_error' | 'processor_unknown';
   expiresAt?: string;
   createdAt: string;
   completedAt?: string;

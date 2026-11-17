@@ -1,5 +1,13 @@
 # @vexpay/node
 
+## 0.18.0
+
+### Minor Changes
+
+- 034913d: Checkout sessions: `checkout.sessions.create` accepts `amountVes` to charge an exact bolívar amount (Pago Móvil, Débito Inmediato and card charge exactly that, whatever the rate). Send exactly one of `amountUsd` or `amountVes`; `amountUsd` is now optional in the create type. Session reads carry `amountVes` (`null` for USD-priced sessions).
+- 44c3ecd: COP: Bre-B, Nequi and Daviplata are the only Colombian peso channels (card, PSE and Bancolombia transfer / QR were removed with their processor). `CopChannelDto` drops `needsTermsAcceptance` and `checkoutOnly`; `CopChannelsDto` drops `pseBanks` and `terms`; `CreateCopPaymentDto` drops `pse`; `CopBuyerDto` drops `personType` and `termsAccepted`; `next.type` is `show_qr`, `approve_in_app` or `submit_otp` (no `redirect` / `redirect_pending`, `url`, `qrSvgBase64`). `CopPaymentWebhookData` drops the retired channels, `card`, the `chargeback` failure code and `reason`. Refunds are accepted within 96 hours on every channel. MCP COP tool descriptions list the three channels.
+- ccd82f3: Webhooks: `PaymentWebhookData.requestedVesAmount` (optional). Set on a Pago Móvil `payment.completed` when the payer sent more than asked (up to Bs 500 more is accepted): the bolívar amount originally asked; `vesAmount` / `usdAmount` are then what arrived.
+
 ## 0.17.0
 
 ### Minor Changes
