@@ -1,5 +1,11 @@
 # @vexpay/node
 
+## 0.19.0
+
+### Minor Changes
+
+- Checkout sessions: `checkout.sessions.create` accepts `successButtonLabel`, the text of the button that takes the buyer to `successUrl` after paying (default «Continuar»; plain text, 1–40 characters, one line; requires `successUrl`). Session reads carry `successButtonLabel` (`null` when unset). MCP `vexpay_create_checkout_session` takes it too.
+
 ## 0.18.0
 
 ### Minor Changes

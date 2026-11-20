@@ -85,7 +85,7 @@ describe('webhooks.constructEvent', () => {
 });
 
 describe('webhook event names', () => {
-  it('match the API event list (packages/sdk-spec/fixtures/webhook-events.json)', () => {
+  it('match the API event list (packages/vexpay/sdk-spec/fixtures/webhook-events.json)', () => {
     const { events } = JSON.parse(
       readFileSync(resolve(__dirname, '../../sdk-spec/fixtures/webhook-events.json'), 'utf8'),
     ) as { events: string[] };

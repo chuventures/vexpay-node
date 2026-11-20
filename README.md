@@ -39,7 +39,7 @@ const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
 const intent = await vexpay.payments.c2p.request({
   usdAmount: 25,
   debtorId: 'V12345678',
-  debtorCellPhone: '584141234567',
+  debtorCellPhone: '584141873562',
   debtorBankCode: 102,
   externalRef: 'order-1042',
 });
@@ -51,7 +51,7 @@ const payment = await vexpay.payments.c2p.execute({
   intentId: intent.intentId,
   usdAmount: 25,
   debtorId: 'V12345678',
-  debtorCellPhone: '584141234567',
+  debtorCellPhone: '584141873562',
   debtorBankCode: 102,
   token,
 });
@@ -332,7 +332,7 @@ const vexpay = new VexPay(process.env.VEXPAY_API_KEY!);
 
 const topup = await vexpay.balance.topups.create({
   amountVes: '100000.00',
-  payerPhone: '04121234567',
+  payerPhone: '04121873562',
   payerCedula: 'V12345678',
   sourceNote: 'Ingresos publicidad quincena 2',
 });
@@ -401,7 +401,7 @@ await vexpay.payments.c2p.execute(
     intentId: '00000000-0000-4000-8000-000000000001',
     usdAmount: 25,
     debtorId: 'V12345678',
-    debtorCellPhone: '584141234567',
+    debtorCellPhone: '584141873562',
     debtorBankCode: 102,
     token: '123456',
   },

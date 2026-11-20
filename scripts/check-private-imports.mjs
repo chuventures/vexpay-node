@@ -1,12 +1,12 @@
 // @vexpay/node is published publicly and mirrored to an open-source repo, so it
-// must never depend on the private workspace (`@vexpay/shared`, `@vexpay/db`,
+// must never depend on the private workspace (`@vexpay/shared`, `@vex-monorepo/db`,
 // `@vexpay/api`, …). Fails on a private import in src/ or a private dependency.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PRIVATE = /^@vexpay\/(?!node$)/;
+const PRIVATE = /^(@vexpay\/(?!node$)|@vex-monorepo\/)/;
 const problems = [];
 
 function walk(dir) {

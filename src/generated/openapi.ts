@@ -106,7 +106,7 @@ export interface paths {
          * Create a simple merchant payout
          * @description Credits a verified merchant Pago Móvil method with an exact VES `monto`. `externalRef` is the idempotency key (same payload → 200 replay; conflicting payload → 409 `external_ref_conflict`). Requires an active merchant and a verified payout method.
          *
-         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance. The first payouts of a seller may also be held for review (`holdReason: "FIRST_PAYOUTS"`, rejected with `rejected_first_payouts`).
          *
          *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
@@ -130,7 +130,7 @@ export interface paths {
          * Instant crédito to the verified tenant payout account
          * @description Credits the tenant’s verified Pago Móvil account (see GET /v1/tenant/payout-account). Requires a verified account that is eligible (first verify is immediate; destination changes require a completed 1 business-day cooling period). `monto` is the gross VES withdrawn from available balance; the bank receives monto minus feePercent.
          *
-         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance. The first payouts of a seller may also be held for review (`holdReason: "FIRST_PAYOUTS"`, rejected with `rejected_first_payouts`).
          *
          *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
@@ -154,7 +154,7 @@ export interface paths {
          * Create a split payout batch (per-item results)
          * @description Creates or replays a batch keyed by batch-level `externalRef`. Each item is processed independently; failures are returned inline with status `failed` and do not abort siblings. Item-level `externalRef` values remain individually idempotent.
          *
-         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance.
+         *     **New-account limit.** While a tenant or merchant is new (first 30 days), money-out is capped per rolling 24h (USD equivalent, default $300). A payout that would exceed it is still created (201) and its funds are reserved, but it is returned with `status: "awaiting_approval"` and `holdReason: "NEW_ACCOUNT_LIMIT"` and is not sent to the bank until VEX Pay reviews it. Approval sends it as usual (`payout.completed` / `payout.failed`); a rejection fails it with `failureCode: "rejected_new_account_limit"` and returns the funds to the balance. The first payouts of a seller may also be held for review (`holdReason: "FIRST_PAYOUTS"`, rejected with `rejected_first_payouts`).
          *
          *     **One payout, one transfer.** A Bs payout is always sent as a single bank transfer and is never split. It can therefore be refused with 422 `insufficient_balance` even when `availableVes` covers it; the error then carries `maxPayoutVes`, the largest amount one payout can take right now. Pay out that amount (or less) and send the rest in another payout. In rare cases a payout is created but held for VEX Pay review with `status: "awaiting_approval"` and `holdReason: "BANK_UNFUNDED"`; it is sent once reviewed, or rejected with `failureCode: "rejected_bank_unfunded"` and the funds returned.
          */
@@ -2141,10 +2141,10 @@ export interface components {
              */
             status: "completed" | "pending" | "failed" | "awaiting_approval";
             /**
-             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `FIRST_PAYOUTS`: the first payout of a seller, or one in its first days of sales, when VEX Pay has turned that review on; rejected with `rejected_first_payouts` and the funds returned. `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
              * @enum {string}
              */
-            holdReason?: "NEW_ACCOUNT_LIMIT" | "BANK_UNFUNDED";
+            holdReason?: "NEW_ACCOUNT_LIMIT" | "FIRST_PAYOUTS" | "BANK_UNFUNDED";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -2219,10 +2219,10 @@ export interface components {
              */
             status: "completed" | "pending" | "failed" | "awaiting_approval";
             /**
-             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
+             * @description Why the payout was held for review. `NEW_ACCOUNT_LIMIT`: the tenant or merchant is new (first 30 days) and this payout would take its rolling 24h money-out above the new-account cap (default US$300 equivalent). `FIRST_PAYOUTS`: the first payout of a seller, or one in its first days of sales, when VEX Pay has turned that review on; rejected with `rejected_first_payouts` and the funds returned. `BANK_UNFUNDED`: VEX Pay could not send the transfer right away on its side; it is sent once reviewed, or rejected with `rejected_bank_unfunded` and the funds returned.
              * @enum {string}
              */
-            holdReason?: "NEW_ACCOUNT_LIMIT" | "BANK_UNFUNDED";
+            holdReason?: "NEW_ACCOUNT_LIMIT" | "FIRST_PAYOUTS" | "BANK_UNFUNDED";
             /** @description Bank reference when available. */
             reference?: string | null;
             /** @description Machine-readable failure when status is failed (e.g. merchant_inactive, payout_method_not_verified). */
@@ -2456,7 +2456,7 @@ export interface components {
             cedula: string;
             /**
              * @description Beneficiary Pago Móvil phone (58… or 0…). Required for `pago_movil`.
-             * @example 584121234567
+             * @example 584121873562
              */
             telefono?: string;
             /**
@@ -2602,7 +2602,7 @@ export interface components {
             referencia: string;
             /** @description Per-recipient credit results in request order. */
             credits: {
-                /** @example 584121234567 */
+                /** @example 584121873562 */
                 telefono: string;
                 /** @example ACCP */
                 code: string;
@@ -2693,7 +2693,7 @@ export interface components {
             monto: number;
             /**
              * @description Payer mobile: 58 + 10 digits, or 0 + 10 digits local form.
-             * @example 584121234567
+             * @example 584121873562
              */
             telefono: string;
             /**
@@ -2742,7 +2742,7 @@ export interface components {
             monto: number;
             /**
              * @description Payer mobile: 58 + 10 digits, or 0 + 10 digits local form.
-             * @example 584121234567
+             * @example 584121873562
              */
             telefono: string;
             /**
@@ -2812,7 +2812,7 @@ export interface components {
             cedula: string;
             /**
              * @description Beneficiary Pago Móvil phone (58… or 0…).
-             * @example 584121234567
+             * @example 584121873562
              */
             telefono: string;
             /**
@@ -2861,7 +2861,7 @@ export interface components {
             cedula: string;
             /**
              * @description Recipient Pago Móvil phone.
-             * @example 584121234567
+             * @example 584121873562
              */
             telefono: string;
             /**
@@ -2933,7 +2933,7 @@ export interface components {
         ChangePaymentDto: {
             /**
              * @description Customer phone that receives the change (vuelto).
-             * @example 584121234567
+             * @example 584121873562
              */
             telefonoDestino: string;
             /**
@@ -3709,7 +3709,7 @@ export interface components {
             debtorId: string;
             /**
              * @description Country code 58 followed by 10 digits.
-             * @example 584121234567
+             * @example 584121873562
              */
             debtorCellPhone: string;
             /**
@@ -3877,7 +3877,7 @@ export interface components {
             bankTxId?: number;
             /** @example V12345678 */
             debtorId?: string;
-            /** @example 584121234567 */
+            /** @example 584121873562 */
             debtorPhone?: string;
             /** @example 102 */
             debtorBankCode?: number;
@@ -3938,7 +3938,7 @@ export interface components {
             vesAmount?: number;
             /** @example V12345678 */
             debtorId: string;
-            /** @example 584121234567 */
+            /** @example 584121873562 */
             debtorCellPhone: string;
             /**
              * @description Venezuelan bank institution code (e.g. 102, 105, 134). Must match a bank from GET /v1/banks.
@@ -4031,7 +4031,7 @@ export interface components {
             bankTxId?: number;
             /** @example V12345678 */
             debtorId?: string;
-            /** @example 584121234567 */
+            /** @example 584121873562 */
             debtorPhone?: string;
             /** @example 102 */
             debtorBankCode?: number;
@@ -4170,7 +4170,7 @@ export interface components {
             bankName: string;
             /**
              * @description Phone the customer sends the Pago Móvil to (11 digits). Null when not configured.
-             * @example 04125555555
+             * @example 04125550193
              */
             phone: string | null;
             /**
@@ -4417,7 +4417,7 @@ export interface components {
             identification: string;
             /** @example maria@mail.com */
             contactEmail: string;
-            /** @example 04141234567 */
+            /** @example 04141873562 */
             contactPhone: string;
             /**
              * @description Optional 4-digit SIMF bank code for the first Pago Móvil payout method. Provide together with phone, or omit both to create a merchant shell with no payout method.
@@ -4426,7 +4426,7 @@ export interface components {
             bankCode?: string;
             /**
              * @description Optional 11-digit local Pago Móvil phone for the first payout method. Provide together with bankCode, or omit both.
-             * @example 04145555555
+             * @example 04145550193
              */
             phone?: string;
             /** @description Pay this merchant's available balance automatically every 15 minutes. Omit it to use your account's `merchantAutoPayoutDefault` (GET /v1/marketplace/settings). Used only when the merchant is created; change it later with PATCH /v1/merchants/{id}. */
@@ -4440,7 +4440,7 @@ export interface components {
             bankCode: string;
             /**
              * @description 11-digit local Pago Móvil phone
-             * @example 04145555555
+             * @example 04145550193
              */
             phone: string;
         };
@@ -4690,6 +4690,11 @@ export interface components {
              */
             cancelUrl?: string;
             /**
+             * @description Text of the button that takes the buyer to successUrl after paying (default «Continuar»). Plain text, 1–40 characters after trimming, one line. Requires successUrl.
+             * @example Continuar para obtener tu voucher
+             */
+            successButtonLabel?: string;
+            /**
              * @description Origins allowed to embed this checkout with @vexpay/js. https only; http://localhost:* allowed for test tenants. Omit to allow the hosted URL only.
              * @example [
              *       "https://shop.example"
@@ -4754,6 +4759,8 @@ export interface components {
             methods: ("c2p" | "pago_movil" | "vpos" | "usdt" | "usdc" | "cop")[];
             successUrl?: string | null;
             cancelUrl?: string | null;
+            /** @description Text of the success button; null = default «Continuar». */
+            successButtonLabel?: string | null;
             /** @description Latest payment for this session, once one exists. */
             paymentId?: string | null;
             /** Format: date-time */
@@ -4865,7 +4872,7 @@ export interface components {
             amountVes: string;
             /**
              * @description Phone the Pago Móvil is sent from (Venezuelan mobile, 04XXXXXXXXX).
-             * @example 04121234567
+             * @example 04121873562
              */
             payerPhone: string;
             /**
@@ -4885,7 +4892,7 @@ export interface components {
              * @example 0169
              */
             bankCode: string;
-            /** @example 04140000000 */
+            /** @example 04142093715 */
             phone: string;
             /** @example J-000000000 */
             identification: string;
@@ -4962,7 +4969,7 @@ export interface components {
             email?: string | null;
             /**
              * @description Venezuelan mobile; stored as 11 digits starting with 04.
-             * @example 04141234567
+             * @example 04141873562
              */
             phone?: string | null;
             /**
@@ -5016,7 +5023,7 @@ export interface components {
             email?: string | null;
             /**
              * @description Venezuelan mobile; stored as 11 digits starting with 04.
-             * @example 04141234567
+             * @example 04141873562
              */
             phone?: string | null;
             /**

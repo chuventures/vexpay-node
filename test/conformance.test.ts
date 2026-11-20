@@ -1,6 +1,6 @@
 /**
  * Shared conformance: error-mapping, pagination, and retry fixtures from
- * packages/sdk-spec/fixtures. Pass/fail must match the Python suite.
+ * packages/vexpay/sdk-spec/fixtures. Pass/fail must match the Python suite.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
